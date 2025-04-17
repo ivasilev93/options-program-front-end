@@ -1199,6 +1199,10 @@
             "type": "string"
           },
           {
+            "name": "asset_mint",
+            "type": "pubkey"
+          },
+          {
             "name": "fee_bps",
             "type": "u64"
           },

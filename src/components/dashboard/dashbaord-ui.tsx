@@ -1,5 +1,6 @@
 import { BN } from '@coral-xyz/anchor';
 import { optionsProgram } from './dashbaord-data-access'
+import { Link } from 'react-router';
 
 // export interface Market {
 //     id: number;
@@ -17,7 +18,6 @@ export interface Market {
     id: number;
     name: string;
     feeBps: BN;  // Note: using BN (Big Number) instead of number
-    bump: number; // New field not in your original struct
     reserveSupply: BN;
     committedReserve: BN;
     premiums: BN;
@@ -28,7 +28,7 @@ export interface Market {
   }
 
 
-  export function MarketList() {
+  export function MarketList({ onDeposit, onBuy }: {onDeposit: (m: any) => void; onBuy: (m: any) => void;}) {
     const { markets, getProgramAccount } = optionsProgram();
     
     if (getProgramAccount.isLoading) {
@@ -104,8 +104,18 @@ export interface Market {
                     <td className="px-4 py-3 text-right">{formatTokenAmount(m.account.committedReserve, m.account.assetDecimals)}</td>
                     <td className="px-4 py-3 text-right">{formatTokenAmount(m.account.premiums, m.account.assetDecimals)}</td>
                     <td className="px-4 py-3 text-right">{formatTokenAmount(m.account.lpMinted, m.account.assetDecimals)}</td>
-                    <td><button className="bg-transparent font-semibold py-2 px-4 border border-blue-900 text-blue-900 hover:shadow-md hover:text-blue-700 rounded-md">Buy Option</button></td>
-                    <td><button className="bg-blue-900 hover:bg-blue-950 hover:shadow-md font-semibold py-2 px-8 text-white rounded-md">Deposit</button></td>
+                    <td><button 
+                      className="bg-transparent font-semibold py-2 px-4 border border-blue-900 text-blue-900 hover:shadow-md hover:text-blue-700 rounded-md"
+                      onClick={() => {
+
+                      }}
+                      >Buy Option</button></td>
+                    <td>
+                        <button 
+                          className="bg-blue-700 hover:bg-blue-800 hover:shadow-md font-semibold py-2 px-8 text-white rounded-md"
+                          onClick={() => onDeposit(m)}
+                        >Deposit</button>
+                    </td>
                   </tr>
                 ))}
               </tbody>

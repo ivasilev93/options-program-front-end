@@ -1,5 +1,5 @@
 import { getOptionsProgram, getOptionsProgramId } from '../../contract/options-program-exports'
-import { ASSOCIATED_TOKEN_PROGRAM_ID, createAssociatedTokenAccountInstruction, getAssociatedTokenAddress, NATIVE_MINT, TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from '@solana/spl-token'
+import { ASSOCIATED_TOKEN_PROGRAM_ID, createAssociatedTokenAccountInstruction, createSyncNativeInstruction, getAssociatedTokenAddress, NATIVE_MINT, TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from '@solana/spl-token'
 import { useConnection, useWallet } from '@solana/wallet-adapter-react'
 import {
     Cluster,
@@ -15,11 +15,13 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { useTransactionToast } from '../ui/ui-layout'
+import { checkUserTokenAmount, syncNativeTokenAmounts } from '../../app/common/token-manager';
 
 import { useMemo } from 'react'
 import { useCluster } from '../cluster/cluster-data-access'
 import { useAnchorProvider } from '../solana/solana-provider'
 import { BN } from '@coral-xyz/anchor'
+
 
 export function optionsProgram() {
     const { connection } = useConnection()
@@ -39,23 +41,21 @@ export function optionsProgram() {
         }) => {
             const { amount, min_amount_out, ix, mint } = input;
             const signer = provider.wallet.publicKey;
+            const mintAddr = new PublicKey(mint);
 
-            const user_asset_ata: PublicKey = await getAssociatedTokenAddress(new PublicKey(mint), signer, false);
-            const accInfo = await connection.getAccountInfo(user_asset_ata);
+            const user_asset_ata: PublicKey = await getAssociatedTokenAddress(mintAddr, signer, false);
+            let transaction = new Transaction();            
 
-            let transaction = new Transaction();
+            const tokenDiff = await checkUserTokenAmount(mintAddr, signer, connection, amount);
 
-            if (!accInfo) {
-                console.log('Creating ATA Ix for market asset...')      
-                transaction.add(
-                    createAssociatedTokenAccountInstruction(
-                      signer,
-                      user_asset_ata,
-                      signer,
-                      NATIVE_MINT,
-                    )
-                  );
-            }   
+            if (tokenDiff > 0) {
+                if (mint == NATIVE_MINT.toBase58()) {
+                    await syncNativeTokenAmounts(signer, tokenDiff, transaction);
+                }
+                else {   
+                   throw new Error('Not enough tokens')
+                }   
+            }           
 
             const [lpMint] = PublicKey.findProgramAddressSync(
                 [
@@ -83,12 +83,15 @@ export function optionsProgram() {
 
             const user_lp_ata: PublicKey = await getAssociatedTokenAddress(lpMint, signer, false);
 
+            const payload = {
+                amount: new BN(amount.toFixed(0)),
+                minAmountOut: new BN(min_amount_out.toFixed(0)),
+                ix: ix
+            };
 
-            const depositIx = await program.methods.marketDeposit(
-                new BN(amount),
-                new BN(min_amount_out),
-                ix
-            ).accountsStrict({
+            const depositIx = await program.methods
+            .marketDeposit(payload)
+            .accountsStrict({
                 signer: signer,
                 userAssetAta: user_asset_ata,
                 userLpAta: user_lp_ata,
@@ -157,7 +160,6 @@ export function optionsProgram() {
               );
 
             const user_lp_ata: PublicKey = await getAssociatedTokenAddress(lpMint, signer, false);
-
 
             const withdrawSign = await program.methods.marketDeposit(
                 new BN(lp_tokens_to_burn),

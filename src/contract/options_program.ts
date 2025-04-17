@@ -1205,6 +1205,10 @@ export type OptionsProgram = {
             "type": "string"
           },
           {
+            "name": "assetMint",
+            "type": "pubkey"
+          },
+          {
             "name": "feeBps",
             "type": "u64"
           },
