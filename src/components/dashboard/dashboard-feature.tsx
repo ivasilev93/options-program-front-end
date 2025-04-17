@@ -26,9 +26,26 @@ export default function DashboardFeature() {
     assetDecimals: number;
     assetMint: PublicKey;
 }>) => {
-    console.log('wtf: ', m)
     setSelectedMarket(m);
     navigate('/liquidity-providers')
+  }
+
+  const handleBuy = (m: ProgramAccount<{
+    id: number;
+    name: string;
+    feeBps: BN;
+    bump: number;
+    reserveSupply: BN;
+    committedReserve: BN;
+    premiums: BN;
+    lpMinted: BN;
+    volatilityBps: number;
+    priceFeed: string;
+    assetDecimals: number;
+    assetMint: PublicKey;
+}>) => {
+    setSelectedMarket(m);
+    navigate('/buy')
   }
  
 
@@ -50,7 +67,7 @@ export default function DashboardFeature() {
     // </div>
 
     <div>
-      <MarketList onDeposit={handleDeposit} onBuy={() => {}}/>
+      <MarketList onDeposit={handleDeposit} onBuy={handleBuy}/>
     </div>
   )
 }

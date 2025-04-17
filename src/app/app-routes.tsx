@@ -9,25 +9,24 @@ const ClusterFeature = lazy(() => import('../components/cluster/cluster-feature'
 const DashboardFeature = lazy(() => import('../components/dashboard/dashboard-feature'))
 const AdminFeature = lazy(() => import('../components/admin/admin-feature'))
 const LiquidityProvidersFeature = lazy(() => import('../components/liquidity-providers/liquidity-providers'))
+const OptionsBuyingFeature = lazy(() => import('../components/buy/options-feature'))
 
 
 
 const links: { label: string; path: string }[] = [
   { label: 'Admin', path: '/admin' },
   // { label: 'LPs', path: '/lps' },
-  { label: 'Buy', path: '/buy' },
+  // { label: 'Buy', path: '/buy' },
   { label: 'Account', path: '/account' },
   { label: 'Clusters', path: '/clusters' },
-  { label: 'Counter Program', path: '/counter' },
 ]
 
 const routes: RouteObject[] = [
   { path: '/admin', element: <AdminFeature /> },
   { path: '/liquidity-providers', element: <LiquidityProvidersFeature /> },
-  { path: '/buy', element: <AccountListFeature /> },
+  { path: '/buy', element: <OptionsBuyingFeature /> },
   { path: '/account/', element: <AccountListFeature /> },
   { path: '/account/:address', element: <AccountDetailFeature /> },
-  // { path: '/counter', element: <CounterFeature /> },
   { path: '/clusters', element: <ClusterFeature /> },
 ]
 

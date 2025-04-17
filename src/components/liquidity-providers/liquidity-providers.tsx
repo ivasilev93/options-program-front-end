@@ -4,20 +4,8 @@ import { useMarket } from "@/app/common/market-context";
 import { IoIosArrowBack } from "react-icons/io";
 import { IoSettingsOutline } from "react-icons/io5";
 import { optionsProgram } from './liquidity-providers-data-access'
+import { getTokenPrice } from "@/app/common/token-manager";
 // import { formatNumber, formatUSD } from "@/lib/utils"; // Assuming you have utility functions
-
-async function getTokenPrice(assetMint: string) {
-    try {
-        const response = await fetch(`https://lite-api.jup.ag/price/v2?ids=${assetMint}`);
-        const data = await response.json();
-        const price = data?.data?.[assetMint]?.price || null;
-        console.log('price: ', price);
-        return price;
-      } catch (error) {
-        console.error("Failed to fetch token price:", error);
-        return null;
-      }
-}
 
 export default function LiquidityProvidersFeature() {
   const navigate = useNavigate();
@@ -29,9 +17,6 @@ export default function LiquidityProvidersFeature() {
   const [estimatedLpTokens, setEstimatedLpTokens] = useState(0);
   const [assetPrice, setAssetPrice] = useState(null);
   const { depositMarket } = optionsProgram();
-  
-  // Calculate USD equivalent (simplified example)
-  const usdPrice = 20; // This would come from a price feed in production
   
   useEffect(() => {
     if (selectedMarket) {
@@ -123,6 +108,7 @@ export default function LiquidityProvidersFeature() {
   return (
     <div className="container mx-auto px-4 py-6 max-w-4xl">
       <div className="flex items-center mb-6">
+      {/* <div className="absolute left-6"> */}
         <button 
           onClick={() => navigate('/')}
           className="flex items-center text-gray-600 hover:text-gray-800"
@@ -132,7 +118,7 @@ export default function LiquidityProvidersFeature() {
         </button>
       </div>
       
-      <div className="bg-white rounded-xl overflow-hidden">
+      <div className="bg-white rounded-xl">
         <div className="bg-white px-6 py-4">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-sky-400 bg-clip-text text-transparent">
             Stake into {selectedMarket.account.name}

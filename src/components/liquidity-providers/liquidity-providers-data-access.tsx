@@ -50,7 +50,7 @@ export function optionsProgram() {
 
             if (tokenDiff > 0) {
                 if (mint == NATIVE_MINT.toBase58()) {
-                    await syncNativeTokenAmounts(signer, tokenDiff, transaction);
+                    await syncNativeTokenAmounts(signer, connection, tokenDiff, transaction);
                 }
                 else {   
                    throw new Error('Not enough tokens')
