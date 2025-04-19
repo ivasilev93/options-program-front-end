@@ -5,18 +5,25 @@ import { IoIosArrowBack } from "react-icons/io";
 import { IoSettingsOutline } from "react-icons/io5";
 import { optionsProgram } from './liquidity-providers-data-access'
 import { getTokenPrice } from "@/app/common/token-manager";
+// import { publicKey } from "@coral-xyz/anchor/dist/cjs/utils";
+import { PublicKey } from "@solana/web3.js";
+import { getAssociatedTokenAddress } from "@solana/spl-token";
+import { useWallet } from "@solana/wallet-adapter-react";
 // import { formatNumber, formatUSD } from "@/lib/utils"; // Assuming you have utility functions
 
 export default function LiquidityProvidersFeature() {
   const navigate = useNavigate();
+  const { publicKey } = useWallet();
   const { selectedMarket } = useMarket();
   const [amount, setAmount] = useState("");
   const [usdAmount, setUsdAmount] = useState("");
   const [slippage, setSlippage] = useState(0.5); // Default 0.5%
   const [showSlippageSettings, setShowSlippageSettings] = useState(false);
   const [estimatedLpTokens, setEstimatedLpTokens] = useState(0);
+  const [userLpTokens, setUserLpTokens] = useState(0);
   const [assetPrice, setAssetPrice] = useState(null);
-  const { depositMarket } = optionsProgram();
+  const { depositMarket, getUserLpBalance } = optionsProgram();
+  const [actionType, setActionType] = useState("DEPOSIT");
   
   useEffect(() => {
     if (selectedMarket) {
@@ -28,7 +35,7 @@ export default function LiquidityProvidersFeature() {
           
           fetchPrice();
           // Optional: Set up interval to update price regularly
-          const interval = setInterval(fetchPrice, 30000); // every 30 seconds
+          const interval = setInterval(fetchPrice, 5000); // every 5 seconds
           
           return () => clearInterval(interval);
     } else {
@@ -53,6 +60,26 @@ export default function LiquidityProvidersFeature() {
     }
   }, [amount, selectedMarket]);
   
+  //Fetch user LPtokens
+  useEffect(() => {
+    const fetchUserLpBalance = async () => {
+      if (!selectedMarket || !publicKey) return;
+
+      try {
+        console.log('hellloo')
+        const tokenBalance = await getUserLpBalance(selectedMarket.account.id, publicKey.toBase58());
+        console.log('hellloo: tokenBalance', tokenBalance)
+
+        setUserLpTokens(tokenBalance);
+      } catch (err) {
+        console.log("Failed to fetch token balance", err);
+        setUserLpTokens(0);
+      }
+    }
+
+    fetchUserLpBalance();
+  }, [selectedMarket, publicKey])
+
   // Handle USD amount changes
   const handleUsdChange = (value: any) => {
     setUsdAmount(value);
@@ -64,10 +91,16 @@ export default function LiquidityProvidersFeature() {
     }
   };
   
-  const formatBN = (bn: any, decimals = 0) => {
+  const formatBNtoUsd = (bn: any, decimals = 0) => {
     if (!bn) return "0";
     const tokenAmount = bn.toNumber() / Math.pow(10, decimals);
     return (tokenAmount * (assetPrice ?? 0)).toLocaleString();
+  };
+
+  const formatToTokenCount = (bn: any, decimals = 0) => {
+    if (!bn) return "0";
+    const tokenAmount = bn.toNumber() / Math.pow(10, decimals);
+    return tokenAmount
   };
   
   const calculateProfitability = () => {
@@ -75,6 +108,7 @@ export default function LiquidityProvidersFeature() {
     const premiums = selectedMarket.account.premiums.toNumber();
     const totalReserve = selectedMarket.account.reserveSupply.toNumber();
     if (totalReserve === 0) return "0%";
+    console.log('+++', premiums, totalReserve, (premiums / totalReserve))
     return ((premiums / totalReserve) * 100).toFixed(2) + "%";
   };
   
@@ -88,7 +122,7 @@ export default function LiquidityProvidersFeature() {
     const amountInTokens = parseFloat(amount) * Math.pow(10, selectedMarket.account.assetDecimals);
     console.log(slippage/100)
     const slippageDecimal = slippage/100;
-    const minAmountOut = amountInTokens * (1 - slippageDecimal);
+    const minAmountOut = 1; //amountInTokens * (1 - slippageDecimal);
 
     const depositPayload = {
         amount: amountInTokens,
@@ -96,6 +130,8 @@ export default function LiquidityProvidersFeature() {
         ix: selectedMarket.account.id,
         mint: selectedMarket.account.assetMint.toBase58()
     };
+
+    console.log('payl', depositPayload)
 
     try {
         await depositMarket.mutateAsync(depositPayload);
@@ -137,11 +173,15 @@ export default function LiquidityProvidersFeature() {
               {/* <div className="rounded-lg bg-gray-50 p-4"> */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-gray-500">Pool liquidity</p>
+                    <p className="text-sm text-gray-500">Reserve ($USD)</p>
                     <p className="text-lg font-medium">
-                      ${formatBN(selectedMarket.account.reserveSupply.add(selectedMarket.account.premiums), 
+                      ${formatBNtoUsd(selectedMarket.account.reserveSupply.add(selectedMarket.account.premiums), 
                       selectedMarket.account.assetDecimals)}
                     </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Reserve (tokens)</p>
+                    <p className="text-lg font-medium">{formatToTokenCount(selectedMarket.account.reserveSupply, selectedMarket.account.assetDecimals)}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Profitability</p>
@@ -156,6 +196,13 @@ export default function LiquidityProvidersFeature() {
                     <p className="text-lg font-medium">{selectedMarket.account.volatilityBps / 100}%</p>
                   </div>
                 </div>
+              </div>
+
+              <div className="py-2">
+                <p className="text-sm text-gray-500 mb-1">Your LP token balance</p>
+                <p className="font-mono text-sm p-2 rounded break-all">
+                  {userLpTokens}
+                </p>
               </div>
               
               <div className="py-2">
@@ -180,7 +227,32 @@ export default function LiquidityProvidersFeature() {
             
             {/* Right Column - Deposit Form */}
             <div className="bg-gray-50 rounded-lg p-4 shadow-2xl ">
-              <h2 className="text-lg font-medium mb-4">Deposit Assets</h2>
+              {/* <h2 className="text-lg font-medium mb-4">Deposit Assets</h2> */}
+               {/* Deposiw/Withdraw */}
+               <div>
+                  <div className="grid grid-cols-2 gap-2 mb-4">
+                    <button 
+                      className={`py-2 px-4 rounded-lg font-medium transition-colors ${
+                        actionType === "DEPOSIT" 
+                          ? "bg-blue-700 text-white" 
+                          : "bg-white border border-gray-200 text-gray-700"
+                      }`}
+                      onClick={() => setActionType("DEPOSIT")}
+                    >
+                      Stake
+                    </button>
+                    <button 
+                      className={`py-2 px-4 rounded-lg font-medium transition-colors ${
+                        actionType === "WITHDRAW" 
+                          ? "bg-blue-700 text-white" 
+                          : "bg-white border border-gray-200 text-gray-700"
+                      }`}
+                      onClick={() => setActionType("WITHDRAW")}
+                    >
+                      Withdraw
+                    </button>
+                  </div>
+                </div>
               
               <div className="space-y-4">
                 <div>
@@ -260,7 +332,7 @@ export default function LiquidityProvidersFeature() {
                   disabled={!amount || parseFloat(amount) <= 0}
                   className="w-full bg-blue-700 hover:bg-blue-800 disabled:bg-gray-300 text-white py-3 px-4 rounded-lg font-medium transition-colors"
                 >
-                  Stake
+                  {actionType === "DEPOSIT" ? "Stake" : "Withdraw"}
                 </button>
               </div>
             </div>

@@ -50,7 +50,6 @@ export function optionsProgram() {
             const user_asset_ata: PublicKey = await getAssociatedTokenAddress(mintAddr, signer, false);
             let transaction = new Transaction();            
 
-            const strikePriceUsdScaled = strikePrice * Math.pow(10, 6);
             const amount = 1000000000; //TODO: Estimated premium amount
             //NEEDS slippage constraints also...
 
@@ -101,7 +100,7 @@ export function optionsProgram() {
             const payload = {
                 marketIx: marketIx,
                 option: option === "CALL" ? { call: {} } : { put: {} },
-                strikePriceUsd: new BN(strikePriceUsdScaled),
+                strikePriceUsd: new BN(strikePrice),
                 expiryStamp: new BN(expiryStamp),
                 quantity: new BN(quantity)
                 //slippage

@@ -32,20 +32,10 @@ console.log('sel m', selectedMarket?.account.premiums.toString());
                 setPriceChange({ value: change, isPositive: change >= 0 });
               }
             setAssetPrice(Number(price));
-
-            // Set default strike price slightly above market for CALL, below for PUT
-            // if (!strikePrice) {
-            //     const defaultStrike = optionType === "CALL" 
-            //         ? (price * 1.05).toFixed(2) 
-            //         : (price * 0.95).toFixed(2);
-            //     setStrikePrice(defaultStrike);
-            // }
         };
           
         fetchPrice();
-        // Optional: Set up interval to update price regularly
-        const interval = setInterval(fetchPrice, 5000); // every 30 seconds
-          
+        const interval = setInterval(fetchPrice, 5000); // every 5 seconds          
         return () => clearInterval(interval);
     } else {
         navigate('/');
@@ -53,39 +43,39 @@ console.log('sel m', selectedMarket?.account.premiums.toString());
   }, [selectedMarket, navigate, optionType]);
   
   // Calculate estimated premium when relevant inputs change
-  useEffect(() => {
-    if (strikePrice && quantity && assetPrice) {
-      // This is a simplified calculation for demo purposes
-      // In production, you would use a proper options pricing model (Black-Scholes, etc.)
-      const strikePriceFloat = parseFloat(strikePrice);
-      const quantityFloat = parseFloat(quantity);
-      const daysToExpiry = expiryDays;
+  // useEffect(() => {
+  //   if (strikePrice && quantity && assetPrice) {
+  //     // This is a simplified calculation for demo purposes
+  //     // In production, you would use a proper options pricing model (Black-Scholes, etc.)
+  //     const strikePriceFloat = parseFloat(strikePrice);
+  //     const quantityFloat = parseFloat(quantity);
+  //     const daysToExpiry = expiryDays;
       
-      // Very basic model factors:
-      // - Time value (more days = higher premium)
-      // - Intrinsic value (distance from current price)
-      const timeValue = (daysToExpiry / 365) * assetPrice * 0.1; // 10% annualized time value
+  //     // Very basic model factors:
+  //     // - Time value (more days = higher premium)
+  //     // - Intrinsic value (distance from current price)
+  //     const timeValue = (daysToExpiry / 365) * assetPrice * 0.1; // 10% annualized time value
       
-      let intrinsicValue = 0;
-      if (optionType === "CALL") {
-        // For calls: higher premium when price is closer to or above strike
-        intrinsicValue = Math.max(0, assetPrice - strikePriceFloat);
-        const volatilityFactor = (selectedMarket?.account.volatilityBps ?? 0) / 10000 || 0.2;
-        const distanceFromStrike = Math.abs(assetPrice - strikePriceFloat) / assetPrice;
-        const premium = (intrinsicValue + timeValue + (assetPrice * volatilityFactor * (1 - distanceFromStrike))) * quantityFloat;
-        setEstimatedPremium(premium);
-      } else {
-        // For puts: higher premium when price is closer to or below strike
-        intrinsicValue = Math.max(0, strikePriceFloat - assetPrice);
-        const volatilityFactor = (selectedMarket?.account.volatilityBps ?? 0) / 10000 || 0.2;
-        const distanceFromStrike = Math.abs(strikePriceFloat - assetPrice) / assetPrice;
-        const premium = (intrinsicValue + timeValue + (assetPrice * volatilityFactor * (1 - distanceFromStrike))) * quantityFloat;
-        setEstimatedPremium(premium);
-      }
-    } else {
-      setEstimatedPremium(0);
-    }
-  }, [strikePrice, quantity, expiryDays, optionType, assetPrice, selectedMarket]);
+  //     let intrinsicValue = 0;
+  //     if (optionType === "CALL") {
+  //       // For calls: higher premium when price is closer to or above strike
+  //       intrinsicValue = Math.max(0, assetPrice - strikePriceFloat);
+  //       const volatilityFactor = (selectedMarket?.account.volatilityBps ?? 0) / 10000 || 0.2;
+  //       const distanceFromStrike = Math.abs(assetPrice - strikePriceFloat) / assetPrice;
+  //       const premium = (intrinsicValue + timeValue + (assetPrice * volatilityFactor * (1 - distanceFromStrike))) * quantityFloat;
+  //       setEstimatedPremium(premium);
+  //     } else {
+  //       // For puts: higher premium when price is closer to or below strike
+  //       intrinsicValue = Math.max(0, strikePriceFloat - assetPrice);
+  //       const volatilityFactor = (selectedMarket?.account.volatilityBps ?? 0) / 10000 || 0.2;
+  //       const distanceFromStrike = Math.abs(strikePriceFloat - assetPrice) / assetPrice;
+  //       const premium = (intrinsicValue + timeValue + (assetPrice * volatilityFactor * (1 - distanceFromStrike))) * quantityFloat;
+  //       setEstimatedPremium(premium);
+  //     }
+  //   } else {
+  //     setEstimatedPremium(0);
+  //   }
+  // }, [strikePrice, quantity, expiryDays, optionType, assetPrice, selectedMarket]);
   
   const formatBN = (bn: BN, decimals = 0) => {
     if (!bn) return "0";
@@ -109,8 +99,8 @@ console.log('sel m', selectedMarket?.account.premiums.toString());
   const handleBuyOption = async () => {
     const strikePriceScaled = parseFloat(strikePrice) * Math.pow(10, 6);
     // const quantityInTokens = parseFloat(quantity) * Math.pow(10, selectedMarket.account.assetDecimals);
-    const slippageDecimal = slippage/100;
-    const maxPremiumCost = estimatedPremium * (1 + slippageDecimal) * Math.pow(10, selectedMarket.account.assetDecimals);
+    // const slippageDecimal = slippage/100;
+    // const maxPremiumCost = estimatedPremium * (1 + slippageDecimal) * Math.pow(10, selectedMarket.account.assetDecimals);
 
     const nowInSeconds = Math.floor(Date.now() / 1000); // UNIX timestamp in seconds
     const expiryTimestamp = nowInSeconds + expiryDays * 24 * 60 * 60;
@@ -135,6 +125,7 @@ console.log('sel m', selectedMarket?.account.premiums.toString());
   };
 
   const handleExpiryPreset = (days: number) => {
+    console.log('daysss', days)
     setExpiryDays(days);
   };
   

@@ -19,6 +19,7 @@ export async function checkUserTokenAmount(mintAddr: PublicKey, user: PublicKey,
     const tokenBalanceInfo = await connection.getTokenAccountBalance(userTokenAddrr);    
 
     const tokenBalance = tokenBalanceInfo?.value.uiAmount || 0;
+    console.log('user token abalance', tokenBalance);
     const amountNeeded = tokenBalance - tokenAmount;
     
     return amountNeeded >= 0 ? 0 : tokenAmount - tokenBalance;    
@@ -27,6 +28,8 @@ export async function checkUserTokenAmount(mintAddr: PublicKey, user: PublicKey,
 export async function syncNativeTokenAmounts(user: PublicKey, connection: Connection, tokenAmount: number, tx: Transaction) {
     const userTokenAddrr: PublicKey = await getAssociatedTokenAddress(NATIVE_MINT, user, false);
     const userTokenAccInfo = await connection.getAccountInfo(userTokenAddrr);
+    const amnt = Math.floor(tokenAmount) + 1;
+    console.log('amnt', amnt)
 
     if (!userTokenAccInfo) {
         console.log("Creating  oken acc for NATIVE_MINT mint:")
@@ -44,7 +47,7 @@ export async function syncNativeTokenAmounts(user: PublicKey, connection: Connec
         SystemProgram.transfer({
           fromPubkey: user,
           toPubkey: userTokenAddrr,
-          lamports: tokenAmount,
+          lamports: amnt,
         }),
         createSyncNativeInstruction(userTokenAddrr)
       );    

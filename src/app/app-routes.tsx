@@ -10,6 +10,7 @@ const DashboardFeature = lazy(() => import('../components/dashboard/dashboard-fe
 const AdminFeature = lazy(() => import('../components/admin/admin-feature'))
 const LiquidityProvidersFeature = lazy(() => import('../components/liquidity-providers/liquidity-providers'))
 const OptionsBuyingFeature = lazy(() => import('../components/buy/options-feature'))
+const PositionsFeature = lazy(() => import('../components/positions/positions-feature'))
 
 
 
@@ -19,12 +20,14 @@ const links: { label: string; path: string }[] = [
   // { label: 'Buy', path: '/buy' },
   { label: 'Account', path: '/account' },
   { label: 'Clusters', path: '/clusters' },
+  { label: 'Positions', path: '/positions' },
 ]
 
 const routes: RouteObject[] = [
   { path: '/admin', element: <AdminFeature /> },
   { path: '/liquidity-providers', element: <LiquidityProvidersFeature /> },
   { path: '/buy', element: <OptionsBuyingFeature /> },
+  { path: '/positions', element: <PositionsFeature /> },
   { path: '/account/', element: <AccountListFeature /> },
   { path: '/account/:address', element: <AccountDetailFeature /> },
   { path: '/clusters', element: <ClusterFeature /> },

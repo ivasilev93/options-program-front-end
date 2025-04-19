@@ -53,9 +53,21 @@ export default function AdminFeature() {
     };
 
     return (
-        <div className="bg-base-200 rounded-lg p-6 shadow-lg max-w-2xl mx-auto">
-            <h2 className="text-2xl font-bold mb-6 text-center">Create New Market</h2>
-            
+        <div className="container mx-auto px-4 py-6 max-w-7xl">        
+        <div className="bg-white rounded-xl">
+          <div className="bg-white px-6 py-4">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-sky-400 bg-clip-text text-transparent">
+            Create New Market
+            </h1>
+            {/* <p className="text-lg text-gray-600 opacity-80 mt-2">
+              Interact with on-chain markets featuring dynamic pricing and custom terms
+            </p> */}
+          </div>
+  
+          
+          {/* <div className="p-4"> */}
+          <div className="space-y-6">
+          <div className="bg-white rounded-lg p-6  max-w-2xl mx-auto">            
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="form-control">
                     <label className="label">
@@ -175,7 +187,7 @@ export default function AdminFeature() {
                 <div className="form-control mt-6">
                     <button 
                         type="submit" 
-                        className="btn btn-primary w-full"
+                        className="btn btn-primary w-full text-lg"
                         disabled={isSubmitting}
                     >
                         {isSubmitting ? (
@@ -204,5 +216,8 @@ export default function AdminFeature() {
                 </div>
             )}
         </div>
+          </div>
+        </div>
+      </div>
     );
 }

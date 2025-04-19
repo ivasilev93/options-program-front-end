@@ -187,8 +187,30 @@ export function optionsProgram() {
         onError: () => toast.error('Failed')
     })
 
+    const getUserLpBalance = async (marketIx: number, userPubkey: string)  => {
+        const [lpMint] = PublicKey.findProgramAddressSync(
+            [
+              Buffer.from("market_lp_mint"),
+              Buffer.from(new Uint8Array(new Uint16Array([marketIx]).buffer))
+            ],
+            program.programId
+          );
+
+          const userTokenAddrr: PublicKey = await getAssociatedTokenAddress(lpMint, new PublicKey(userPubkey), false);
+          const userTokenAccInfo = await connection.getAccountInfo(userTokenAddrr);
+          if (!userTokenAccInfo) {
+              return 0;
+          }
+        
+          const tokenBalanceInfo = await connection.getTokenAccountBalance(userTokenAddrr);          
+          const tokenBalance = tokenBalanceInfo?.value.uiAmount || 0;
+          return tokenBalance
+        }
+      
+
     return {
         depositMarket,
-        withdrawMarket
+        withdrawMarket,
+        getUserLpBalance
     }
 }
