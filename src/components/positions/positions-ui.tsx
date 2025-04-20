@@ -1,19 +1,15 @@
 import { PublicKey } from '@solana/web3.js';
 import { optionsProgram } from './positions-data-access'
 import { BN } from '@coral-xyz/anchor';
+import { useMarket } from "@/app/common/market-context";
+import { formatNumber, tokensToMoney } from '@/app/common/token-manager';
 
 
 export function PositionsList({ account }: { account: PublicKey }) {
-    const { getUserAccount } = optionsProgram({ account });
-    console.log('sss', getUserAccount.data);
-
-    const formatNumber = (value: number | BN, decimals: number = 0) => {
-        const numValue = BN.isBN(value) ? value.toNumber() : value;
-        return new Intl.NumberFormat('en-US', {
-          maximumFractionDigits: decimals,
-          minimumFractionDigits: decimals,
-        }).format(numValue);
-      };
+    const { getUserAccount, exercise } = optionsProgram({ account });
+    const { allMarkets, prices } = useMarket();
+    console.log('allMarkets', allMarkets);
+    console.log('prices', prices);
 
     const descaleUsdPrice = (value: number | BN) => {
       const numValue = BN.isBN(value) ? value.toNumber() : value;
@@ -23,7 +19,6 @@ export function PositionsList({ account }: { account: PublicKey }) {
 
     const formatSolanaTimestamp = (expiry: BN) => {
         const exp = expiry.toNumber();
-        console.log('exp', exp);
 
         if (!expiry || exp == 0) 
             return '';
@@ -32,6 +27,14 @@ export function PositionsList({ account }: { account: PublicKey }) {
         const date = new Date(millis);
         return date.toLocaleString(); // Local time representation
       }
+
+    const onExercise = async (marketIx: number, optionIx: number, mint: string) => {
+      try {
+        await exercise.mutateAsync({marketIx: marketIx, optionIx: optionIx, mint: mint});
+      } catch(err) {
+        console.log('Error here: ', err);
+      }
+    }
 
     return (
         <div className="container mx-auto px-4 py-6 max-w-7xl">        
@@ -59,42 +62,40 @@ export function PositionsList({ account }: { account: PublicKey }) {
               <thead>
                 <tr className="bg-white">
                   <th className="text-base px-4 py-3">Market</th>
+                  {/* <th className="text-base px-4 py-3 text-right">Name</th> */}
                   <th className="text-base px-4 py-3 text-right">Type</th>
                   <th className="text-base px-4 py-3 text-right">Strike price</th>
                   <th className="text-base px-4 py-3 text-right">Quantity</th>
                   <th className="text-base px-4 py-3 text-right">Expiry</th>
-                  <th className="text-base px-4 py-3 text-right">Premium paid</th>
+                  <th className="text-base px-4 py-3 text-right">Premium (tokens)</th>
+                  <th className="text-base px-4 py-3 text-right">Premium (USD)</th>
                 </tr>
               </thead>
               <tbody>
                 {getUserAccount.data?.options.map((o) => {
-                  // console.log('market: ', m.account.name)
-                  // console.log('market: ', m.account.assetDecimals)
-                  // console.log('market: ', m.account.reserveSupply.toString())
-                  // console.log('market: ', m.account.committedReserve.toString())
-                  // console.log('market: ', m.account.lpMinted.toString())
-                //   console.log('market: ', o.account.premiums.toString())
+                  const market = allMarkets.find(r => r.account.id === o.marketIx)?.account;
+                  const marketMint = market?.assetMint?.toBase58();
                   return (
                     // <tr key={o.account.id} className="hover:bg-base-200 border-b border-base-300">
                     <tr className="hover:bg-base-200 border-b border-base-300">
-                      {/* <td className="px-4 py-3 font-medium">
+                      <td className="px-4 py-3 font-medium">
                         <div className="flex items-center gap-2">
                           <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white font-bold">
-                            {m.account.name.charAt(0)}
+                            {market?.name.charAt(0)}
                           </div>
-                          <span>{m.account.name}</span>
+                          <span>{market?.name}</span>
                         </div>
-                      </td> */}
-                      <td className="px-4 py-3 text-right">{o.marketIx}</td>
-                      <td className="px-4 py-3 text-right">{o.optionType}</td>
+                      </td>
+                      {/* <td className="px-4 py-3 text-right">{market?.name}</td> */}
+                      <td className="px-4 py-3 text-right">{o.optionType === 1 ? "CALL" : "PUT"}</td>
                       <td className="px-4 py-3 text-right">${descaleUsdPrice(o.strikePrice)}</td>
                       <td className="px-4 py-3 text-right">{o.quantity.toNumber()}</td>
                       <td className="px-4 py-3 text-right">{formatSolanaTimestamp(o.expiry)}</td>
                       <td className="px-4 py-3 text-right">{o.premium.toNumber()}</td>
-
+                      <td className="px-4 py-3 text-right">${tokensToMoney(o.premium, marketMint, market?.assetDecimals, prices)}</td>       
                       <td><button 
                         className="bg-transparent font-semibold py-2 px-4 border border-blue-900 text-blue-900 hover:shadow-md hover:text-blue-700 rounded-md"
-                        onClick={() => {}}
+                        onClick={() => onExercise(o.marketIx, o.ix, marketMint)} 
                         >Exercise</button></td>
                     </tr>
                   )

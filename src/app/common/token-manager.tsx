@@ -1,6 +1,8 @@
+import { BN } from "@coral-xyz/anchor";
 import { token } from "@coral-xyz/anchor/dist/cjs/utils";
 import { createAssociatedTokenAccountInstruction, createSyncNativeInstruction, getAssociatedTokenAddress, NATIVE_MINT } from "@solana/spl-token";
 import { Connection, PublicKey, SystemProgram, Transaction } from "@solana/web3.js";
+import { PriceFeed } from "./market-context";
 
 
 /**
@@ -52,6 +54,27 @@ export async function syncNativeTokenAmounts(user: PublicKey, connection: Connec
         createSyncNativeInstruction(userTokenAddrr)
       );    
 }
+
+export const tokensToMoney = (value: number | BN, assetMint: string, decimals: number, prices: PriceFeed[]) => {
+    if (!assetMint) return 0;
+
+    const numValue = BN.isBN(value) ? value.toNumber() : value;
+    console.log('numValue', numValue)
+    const price = prices.find(p => p.mint ===assetMint) ?? null;
+    console.log('price', price)
+    const tvl = (numValue / Math.pow(10, decimals)) * (Number(price?.price) || 0);
+    console.log('Number(price?.price)', Number(price?.price))
+    console.log('tvl', tvl)
+    return formatNumber(tvl, 0);
+  }
+
+export  const formatNumber = (value: number | BN, decimals: number = 0) => {
+    const numValue = BN.isBN(value) ? value.toNumber() : value;
+    return new Intl.NumberFormat('en-US', {
+      maximumFractionDigits: decimals,
+      minimumFractionDigits: decimals,
+    }).format(numValue);
+  };
 
 export async function getTokenPrice(assetMint: string) {
     try {

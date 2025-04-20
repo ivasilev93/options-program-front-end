@@ -1,8 +1,9 @@
 import { BN, ProgramAccount } from '@coral-xyz/anchor';
 import { optionsProgram } from './dashbaord-data-access'
 import { Link } from 'react-router';
-import { getTokenPrice } from '@/app/common/token-manager';
+import { formatNumber, getTokenPrice, tokensToMoney } from '@/app/common/token-manager';
 import { useEffect, useState } from 'react';
+import { useMarket, PriceFeed } from '@/app/common/market-context';
 
 export interface Market {
     id: number;
@@ -19,12 +20,13 @@ export interface Market {
 
   export function MarketList({ onDeposit, onBuy }: {onDeposit: (m: any) => void; onBuy: (m: any) => void;}) {
     const { markets, getProgramAccount } = optionsProgram();
-    const [prices, setPrices] = useState<Record<string, number>>({});
+    const { setMarkets, prices, setPrices } = useMarket();
 
     useEffect(() => {
       const fetchPrices = async () => {
         if (!markets.data) return;
   
+        setMarkets(markets.data);
         const mintAddresses = markets.data.map((m) => m.account.assetMint.toBase58());
   
         const priceResults = await Promise.all(
@@ -35,12 +37,13 @@ export interface Market {
           )
         );
   
-        const priceMap: Record<string, number> = {};
-        for (const { mint, price } of priceResults) {
-          priceMap[mint] = price;
-        }
+        console.log('--', priceResults);      
   
-        setPrices(priceMap);
+        const priceFeed: PriceFeed[] = priceResults.map(({ mint, price }) => ({
+          mint,
+          price,
+        }));
+        setPrices(priceFeed);// ????
       };
   
       fetchPrices();
@@ -59,20 +62,20 @@ export interface Market {
     }
   
     // Format number with commas and decimal places
-    const formatNumber = (value: number | BN, decimals: number = 0) => {
-      const numValue = BN.isBN(value) ? value.toNumber() : value;
-      return new Intl.NumberFormat('en-US', {
-        maximumFractionDigits: decimals,
-        minimumFractionDigits: decimals,
-      }).format(numValue);
-    };
+    // const formatNumber = (value: number | BN, decimals: number = 0) => {
+    //   const numValue = BN.isBN(value) ? value.toNumber() : value;
+    //   return new Intl.NumberFormat('en-US', {
+    //     maximumFractionDigits: decimals,
+    //     minimumFractionDigits: decimals,
+    //   }).format(numValue);
+    // };
 
-    const tokensToMoney = (value: number | BN, assetMint: string, decimals: number) => {
-      const numValue = BN.isBN(value) ? value.toNumber() : value;
-      const price = prices[assetMint] ?? null;
-      const tvl = (numValue / Math.pow(10, decimals)) * price;
-      return formatNumber(tvl, 0);
-    }
+    // const tokensToMoney = (value: number | BN, assetMint: string, decimals: number) => {
+    //   const numValue = BN.isBN(value) ? value.toNumber() : value;
+    //   const price = prices.find(p => p.mint ===assetMint) ?? null;
+    //   const tvl = (numValue / Math.pow(10, decimals)) * (price?.price || 0);
+    //   return formatNumber(tvl, 0);
+    // }
   
     // Convert basis points to percentage
     const bpsToPercent = (bps: number | BN) => {
@@ -142,10 +145,10 @@ export interface Market {
                       <td className="px-4 py-3 text-right">{m.account.id}</td>
                       <td className="px-4 py-3 text-right">{bpsToPercent(m.account.feeBps)}</td>
                       <td className="px-4 py-3 text-right">{bpsToPercent(m.account.volatilityBps)}</td>
-                      <td className="px-4 py-3 text-right">${tokensToMoney(m.account.reserveSupply.toString(), m.account.assetMint.toBase58(), m.account.assetDecimals)}</td>
+                      <td className="px-4 py-3 text-right">${tokensToMoney(m.account.reserveSupply.toString(), m.account.assetMint.toBase58(), m.account.assetDecimals, prices)}</td>
                       {/* <td className="px-4 py-3 text-right">{formatTokenAmount(m.account.reserveSupply, m.account.assetDecimals)}</td> */}
                       <td className="px-4 py-3 text-right">{formatTokenAmount(m.account.committedReserve, m.account.assetDecimals)}</td>
-                      <td className="px-4 py-3 text-right">${tokensToMoney(m.account.premiums, m.account.assetMint.toBase58(), m.account.assetDecimals)}</td>
+                      <td className="px-4 py-3 text-right">${tokensToMoney(m.account.premiums, m.account.assetMint.toBase58(), m.account.assetDecimals, prices)}</td>
                       {/* <td className="px-4 py-3 text-right">{formatTokenAmount(m.account.premiums, m.account.assetDecimals)}</td> */}
                       <td className="px-4 py-3 text-right">{formatTokenAmount(m.account.lpMinted, m.account.assetDecimals)}</td>
                       <td><button 
@@ -156,7 +159,7 @@ export interface Market {
                           <button 
                             className="bg-blue-700 hover:bg-blue-800 hover:shadow-md font-semibold py-2 px-8 text-white rounded-md"
                             onClick={() => onDeposit(m)}
-                          >Deposit</button>
+                          >Stake</button>
                       </td>
                     </tr>
                   )

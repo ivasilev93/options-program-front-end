@@ -1283,10 +1283,6 @@
             "type": "i64"
           },
           {
-            "name": "created_stamp",
-            "type": "i64"
-          },
-          {
             "name": "quantity",
             "type": "u64"
           }
@@ -1375,11 +1371,15 @@
             "type": "u8"
           },
           {
+            "name": "ix",
+            "type": "u8"
+          },
+          {
             "name": "padding",
             "type": {
               "array": [
                 "u8",
-                5
+                4
               ]
             }
           }

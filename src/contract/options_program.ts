@@ -1289,10 +1289,6 @@ export type OptionsProgram = {
             "type": "i64"
           },
           {
-            "name": "createdStamp",
-            "type": "i64"
-          },
-          {
             "name": "quantity",
             "type": "u64"
           }
@@ -1381,11 +1377,15 @@ export type OptionsProgram = {
             "type": "u8"
           },
           {
+            "name": "ix",
+            "type": "u8"
+          },
+          {
             "name": "padding",
             "type": {
               "array": [
                 "u8",
-                5
+                4
               ]
             }
           }

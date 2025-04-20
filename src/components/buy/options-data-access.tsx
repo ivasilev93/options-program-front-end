@@ -106,6 +106,16 @@ export function optionsProgram() {
                 //slippage
             };
 
+            console.log('payload', 
+                {
+                    marketIx: marketIx,
+                option: option === "CALL" ? { call: {} } : { put: {} },
+                strikePriceUsd: strikePrice,
+                expiryStamp: expiryStamp,
+                quantity: quantity
+                }
+            )
+
             //Add create acc ix if there is no user acc created
             const actualUserAcc = await program.account.userAccount.getAccountInfo(userAcc);
             if (!actualUserAcc) {

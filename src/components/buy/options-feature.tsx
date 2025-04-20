@@ -197,7 +197,7 @@ console.log('sel m', selectedMarket?.account.premiums.toString());
               </div>
               
               <div className="bg-blue-50 rounded-lg p-4 mt-4">
-                <h3 className="text-blue-800 font-medium mb-2">About Options Trading</h3>
+                {/* <h3 className="text-blue-800 font-medium mb-2">About Options Trading</h3> */}
                 <p className="text-sm text-blue-700">
                   <strong>CALL Options</strong> give you the right to buy the asset at your chosen strike price, 
                   regardless of how high the market price goes. Profitable when prices rise above strike plus premium.

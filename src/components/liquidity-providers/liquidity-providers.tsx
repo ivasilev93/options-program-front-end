@@ -175,13 +175,32 @@ export default function LiquidityProvidersFeature() {
                   <div>
                     <p className="text-sm text-gray-500">Reserve ($USD)</p>
                     <p className="text-lg font-medium">
-                      ${formatBNtoUsd(selectedMarket.account.reserveSupply.add(selectedMarket.account.premiums), 
-                      selectedMarket.account.assetDecimals)}
+                      ${formatBNtoUsd(selectedMarket.account.reserveSupply, selectedMarket.account.assetDecimals)}
                     </p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Reserve (tokens)</p>
                     <p className="text-lg font-medium">{formatToTokenCount(selectedMarket.account.reserveSupply, selectedMarket.account.assetDecimals)}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Commited ($USD)</p>
+                    <p className="text-lg font-medium">
+                      ${formatBNtoUsd(selectedMarket.account.committedReserve, selectedMarket.account.assetDecimals)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Commited (tokens)</p>
+                    <p className="text-lg font-medium">{formatToTokenCount(selectedMarket.account.committedReserve, selectedMarket.account.assetDecimals)}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Premiums ($USD)</p>
+                    <p className="text-lg font-medium">
+                      ${formatBNtoUsd(selectedMarket.account.premiums, selectedMarket.account.assetDecimals)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Premiums (tokens)</p>
+                    <p className="text-lg font-medium">{formatToTokenCount(selectedMarket.account.premiums, selectedMarket.account.assetDecimals)}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Profitability</p>
