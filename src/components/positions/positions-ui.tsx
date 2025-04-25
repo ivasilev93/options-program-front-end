@@ -36,6 +36,10 @@ export function PositionsList({ account }: { account: PublicKey }) {
       }
     }
 
+    const isIinitialized = (o: any) => {
+      return o.quantity.toNumber() > 0 && o.premium.toNumber() > 0 && o.expiry > 0
+    }
+
     return (
         <div className="container mx-auto px-4 py-6 max-w-7xl">        
         <div className="bg-white rounded-xl">
@@ -72,7 +76,9 @@ export function PositionsList({ account }: { account: PublicKey }) {
                 </tr>
               </thead>
               <tbody>
-                {getUserAccount.data?.options.map((o) => {
+                {getUserAccount.data?.options
+                  .filter(o => isIinitialized(o))
+                  .map((o) => {
                   const market = allMarkets.find(r => r.account.id === o.marketIx)?.account;
                   const marketMint = market?.assetMint?.toBase58();
                   return (
@@ -92,7 +98,7 @@ export function PositionsList({ account }: { account: PublicKey }) {
                       <td className="px-4 py-3 text-right">{o.quantity.toNumber()}</td>
                       <td className="px-4 py-3 text-right">{formatSolanaTimestamp(o.expiry)}</td>
                       <td className="px-4 py-3 text-right">{o.premium.toNumber()}</td>
-                      <td className="px-4 py-3 text-right">${tokensToMoney(o.premium, marketMint, market?.assetDecimals, prices)}</td>       
+                      <td className="px-4 py-3 text-right">${tokensToMoney(o.premium, marketMint, market?.assetDecimals, prices, 2)}</td>       
                       <td><button 
                         className="bg-transparent font-semibold py-2 px-4 border border-blue-900 text-blue-900 hover:shadow-md hover:text-blue-700 rounded-md"
                         onClick={() => onExercise(o.marketIx, o.ix, marketMint)} 

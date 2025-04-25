@@ -23,6 +23,8 @@ export async function checkUserTokenAmount(mintAddr: PublicKey, user: PublicKey,
     const tokenBalance = tokenBalanceInfo?.value.uiAmount || 0;
     console.log('user token abalance', tokenBalance);
     const amountNeeded = tokenBalance - tokenAmount;
+    console.log("tokenAmount", tokenAmount)
+
     
     return amountNeeded >= 0 ? 0 : tokenAmount - tokenBalance;    
 }
@@ -55,21 +57,18 @@ export async function syncNativeTokenAmounts(user: PublicKey, connection: Connec
       );    
 }
 
-export const tokensToMoney = (value: number | BN, assetMint: string, decimals: number, prices: PriceFeed[]) => {
+export const tokensToMoney = (value: number | BN, assetMint: string, decimals: number, prices: PriceFeed[], rounding: number) => {
     if (!assetMint) return 0;
 
     const numValue = BN.isBN(value) ? value.toNumber() : value;
-    console.log('numValue', numValue)
     const price = prices.find(p => p.mint ===assetMint) ?? null;
-    console.log('price', price)
     const tvl = (numValue / Math.pow(10, decimals)) * (Number(price?.price) || 0);
-    console.log('Number(price?.price)', Number(price?.price))
-    console.log('tvl', tvl)
-    return formatNumber(tvl, 0);
+    return formatNumber(tvl, rounding);
   }
 
 export  const formatNumber = (value: number | BN, decimals: number = 0) => {
     const numValue = BN.isBN(value) ? value.toNumber() : value;
+
     return new Intl.NumberFormat('en-US', {
       maximumFractionDigits: decimals,
       minimumFractionDigits: decimals,

@@ -6,6 +6,7 @@ import { IoSettingsOutline } from "react-icons/io5";
 import { optionsProgram } from '../buy/options-data-access'
 import { getTokenPrice } from "@/app/common/token-manager";
 import { BN } from "@coral-xyz/anchor";
+import { calculatePremium } from "@/app/common/math-helper";
 
 export default function OptionsBuyingFeature() {
   const navigate = useNavigate();
@@ -13,15 +14,13 @@ export default function OptionsBuyingFeature() {
   const [optionType, setOptionType] = useState("CALL");
   const [strikePrice, setStrikePrice] = useState("");
   const [expiryDays, setExpiryDays] = useState(7);
-  const [quantity, setQuantity] = useState("");
+  const [quantity, setQuantity] = useState(0);
   const [slippage, setSlippage] = useState(0.5); // Default 0.5%
   const [showSlippageSettings, setShowSlippageSettings] = useState(false);
   const [estimatedPremium, setEstimatedPremium] = useState(0);
   const [assetPrice, setAssetPrice] = useState(0);
   const [priceChange, setPriceChange] = useState({ value: 0, isPositive: true });
   const { buyOption } = optionsProgram();
-  
-console.log('sel m', selectedMarket?.account.premiums.toString());
 
   useEffect(() => {
     if (selectedMarket) {
@@ -43,39 +42,47 @@ console.log('sel m', selectedMarket?.account.premiums.toString());
   }, [selectedMarket, navigate, optionType]);
   
   // Calculate estimated premium when relevant inputs change
-  // useEffect(() => {
-  //   if (strikePrice && quantity && assetPrice) {
-  //     // This is a simplified calculation for demo purposes
-  //     // In production, you would use a proper options pricing model (Black-Scholes, etc.)
-  //     const strikePriceFloat = parseFloat(strikePrice);
-  //     const quantityFloat = parseFloat(quantity);
-  //     const daysToExpiry = expiryDays;
+  useEffect(() => {
+    if (strikePrice && quantity && assetPrice) {     
+      // This is a simplified calculation for demo purposes
+      // In production, you would use a proper options pricing model (Black-Scholes, etc.)
+      const strikePriceFloat = parseFloat(strikePrice);
+      // const quantityFloat = parseFloat(quantity);
+
+      if (strikePriceFloat === 0) {
+        setEstimatedPremium(0);
+        return;
+      }
+
+      const timeToExpityInYears = expiryDays / 365;
       
-  //     // Very basic model factors:
-  //     // - Time value (more days = higher premium)
-  //     // - Intrinsic value (distance from current price)
-  //     const timeValue = (daysToExpiry / 365) * assetPrice * 0.1; // 10% annualized time value
+      const volatility= (selectedMarket?.account.volatilityBps ?? 0) / 10000;
       
-  //     let intrinsicValue = 0;
-  //     if (optionType === "CALL") {
-  //       // For calls: higher premium when price is closer to or above strike
-  //       intrinsicValue = Math.max(0, assetPrice - strikePriceFloat);
-  //       const volatilityFactor = (selectedMarket?.account.volatilityBps ?? 0) / 10000 || 0.2;
-  //       const distanceFromStrike = Math.abs(assetPrice - strikePriceFloat) / assetPrice;
-  //       const premium = (intrinsicValue + timeValue + (assetPrice * volatilityFactor * (1 - distanceFromStrike))) * quantityFloat;
-  //       setEstimatedPremium(premium);
-  //     } else {
-  //       // For puts: higher premium when price is closer to or below strike
-  //       intrinsicValue = Math.max(0, strikePriceFloat - assetPrice);
-  //       const volatilityFactor = (selectedMarket?.account.volatilityBps ?? 0) / 10000 || 0.2;
-  //       const distanceFromStrike = Math.abs(strikePriceFloat - assetPrice) / assetPrice;
-  //       const premium = (intrinsicValue + timeValue + (assetPrice * volatilityFactor * (1 - distanceFromStrike))) * quantityFloat;
-  //       setEstimatedPremium(premium);
-  //     }
-  //   } else {
-  //     setEstimatedPremium(0);
-  //   }
-  // }, [strikePrice, quantity, expiryDays, optionType, assetPrice, selectedMarket]);
+      if (optionType === "CALL") {
+        const [, usdPremium] = calculatePremium(
+          strikePriceFloat,
+          assetPrice,
+          timeToExpityInYears,
+          volatility,
+          "CALL",
+          selectedMarket?.account.assetDecimals ?? 0
+        );
+        setEstimatedPremium(usdPremium);
+      } else {
+        const [, usdPremium] = calculatePremium(
+          strikePriceFloat,
+          assetPrice,
+          timeToExpityInYears,
+          volatility,
+          "PUT",
+          selectedMarket?.account.assetDecimals ?? 0
+        );
+        setEstimatedPremium(usdPremium);
+      }
+    } else {
+      setEstimatedPremium(0);
+    }
+  }, [strikePrice, quantity, expiryDays, optionType, assetPrice, selectedMarket]);
   
   const formatBN = (bn: BN, decimals = 0) => {
     if (!bn) return "0";
@@ -110,8 +117,9 @@ console.log('sel m', selectedMarket?.account.premiums.toString());
         option: optionType,
         strikePrice: strikePriceScaled,
         expiryStamp: expiryTimestamp,
-        quantity: Number(quantity),
-        mint: selectedMarket.account.assetMint.toBase58()
+        quantity: quantity,
+        mint: selectedMarket.account.assetMint.toBase58(),
+        estPremium: estimatedPremium
     };
 
     console.log('payload: ', buyOptionPayload);
@@ -256,9 +264,9 @@ console.log('sel m', selectedMarket?.account.premiums.toString());
                       USD
                     </div>
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">
+                  {/* <p className="text-xs text-gray-500 mt-1">
                     Current price: ${assetPrice ? assetPrice.toFixed(2) : "Loading..."}
-                  </p>
+                  </p> */}
                 </div>
                 
                 {/* Expiry */}
@@ -325,7 +333,7 @@ console.log('sel m', selectedMarket?.account.premiums.toString());
                     <input 
                       type="number" 
                       value={quantity}
-                      onChange={(e) => setQuantity(e.target.value)}
+                      onChange={(e) => setQuantity(Number(e.target.value))}
                       className="w-full p-3 outline-none" 
                       placeholder="0.00"
                     />
@@ -374,14 +382,14 @@ console.log('sel m', selectedMarket?.account.premiums.toString());
                   <div className="flex justify-between text-sm">
                     <span className="text-blue-800">Estimated Premium:</span>
                     <span className="font-medium text-blue-900">
-                      ${estimatedPremium.toFixed(2)}
+                      ${(estimatedPremium * quantity).toFixed(2)}
                     </span>
                   </div>
                 </div>
                 
                 <button 
                   onClick={handleBuyOption}
-                  disabled={!strikePrice || !quantity || parseFloat(quantity) <= 0}
+                  disabled={!strikePrice || quantity <= 0}
                   className={`w-full py-3 px-4 rounded-lg font-medium transition-colors ${
                     optionType === "CALL"
                       ? "bg-green-600 hover:bg-green-700 disabled:bg-gray-300 text-white"

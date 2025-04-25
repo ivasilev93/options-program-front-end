@@ -94,7 +94,10 @@ export function optionsProgram({ account }: { account: PublicKey }) {
           console.log('Exercise signature: ', signature)
           transactionToast(signature)
       },
-      onError: () => toast.error('Failed')
+      onError: (err) => {
+        toast.error('Failed')
+        console.log('eee', err);
+      }
   })
   
       return {

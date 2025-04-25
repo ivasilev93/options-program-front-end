@@ -122,7 +122,7 @@ export function optionsProgram() {
             lp_tokens_to_burn: number,
             min_amount_out: number,
             ix: number,
-            mint: string
+            mint: PublicKey
         }) => {
             const { lp_tokens_to_burn, min_amount_out, ix, mint } = input;
             const signer = provider.wallet.publicKey;
@@ -161,10 +161,15 @@ export function optionsProgram() {
 
             const user_lp_ata: PublicKey = await getAssociatedTokenAddress(lpMint, signer, false);
 
-            const withdrawSign = await program.methods.marketDeposit(
-                new BN(lp_tokens_to_burn),
-                new BN(min_amount_out),
-                ix
+            console.log('check', {
+              lpTokensToBurn: lp_tokens_to_burn,
+              minAmountOut: min_amount_out,
+              ix: ix});
+
+            const withdrawSign = await program.methods.marketWithdraw({
+                lpTokensToBurn: new BN(lp_tokens_to_burn),
+                minAmountOut: new BN(min_amount_out),
+                ix: ix}
             ).accountsStrict({
                 signer: signer,
                 userAssetAta: user_asset_ata,
@@ -202,9 +207,10 @@ export function optionsProgram() {
               return 0;
           }
         
-          const tokenBalanceInfo = await connection.getTokenAccountBalance(userTokenAddrr);          
-          const tokenBalance = tokenBalanceInfo?.value.uiAmount || 0;
-          return tokenBalance
+          const tokenBalanceInfo = await connection.getTokenAccountBalance(userTokenAddrr);     
+          // console.log('asd', tokenBalanceInfo);     
+          // const tokenBalance = tokenBalanceInfo?.value.uiAmount || 0;
+          return tokenBalanceInfo
         }
       
 

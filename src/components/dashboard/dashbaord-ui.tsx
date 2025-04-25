@@ -25,6 +25,8 @@ export interface Market {
     useEffect(() => {
       const fetchPrices = async () => {
         if (!markets.data) return;
+
+        console.log('markets', markets.data)
   
         setMarkets(markets.data);
         const mintAddresses = markets.data.map((m) => m.account.assetMint.toBase58());
@@ -60,22 +62,6 @@ export interface Market {
         </div>
       );
     }
-  
-    // Format number with commas and decimal places
-    // const formatNumber = (value: number | BN, decimals: number = 0) => {
-    //   const numValue = BN.isBN(value) ? value.toNumber() : value;
-    //   return new Intl.NumberFormat('en-US', {
-    //     maximumFractionDigits: decimals,
-    //     minimumFractionDigits: decimals,
-    //   }).format(numValue);
-    // };
-
-    // const tokensToMoney = (value: number | BN, assetMint: string, decimals: number) => {
-    //   const numValue = BN.isBN(value) ? value.toNumber() : value;
-    //   const price = prices.find(p => p.mint ===assetMint) ?? null;
-    //   const tvl = (numValue / Math.pow(10, decimals)) * (price?.price || 0);
-    //   return formatNumber(tvl, 0);
-    // }
   
     // Convert basis points to percentage
     const bpsToPercent = (bps: number | BN) => {
@@ -126,12 +112,6 @@ export interface Market {
               </thead>
               <tbody>
                 {markets.data?.map((m) => {
-                  // console.log('market: ', m.account.name)
-                  // console.log('market: ', m.account.assetDecimals)
-                  // console.log('market: ', m.account.reserveSupply.toString())
-                  // console.log('market: ', m.account.committedReserve.toString())
-                  // console.log('market: ', m.account.lpMinted.toString())
-                  console.log('market: ', m.account.premiums.toString())
                   return (
                     <tr key={m.account.id} className="hover:bg-base-200 border-b border-base-300">
                       <td className="px-4 py-3 font-medium">
@@ -145,10 +125,10 @@ export interface Market {
                       <td className="px-4 py-3 text-right">{m.account.id}</td>
                       <td className="px-4 py-3 text-right">{bpsToPercent(m.account.feeBps)}</td>
                       <td className="px-4 py-3 text-right">{bpsToPercent(m.account.volatilityBps)}</td>
-                      <td className="px-4 py-3 text-right">${tokensToMoney(m.account.reserveSupply.toString(), m.account.assetMint.toBase58(), m.account.assetDecimals, prices)}</td>
+                      <td className="px-4 py-3 text-right">${tokensToMoney(m.account.reserveSupply.toString(), m.account.assetMint.toBase58(), m.account.assetDecimals, prices, 0)}</td>
                       {/* <td className="px-4 py-3 text-right">{formatTokenAmount(m.account.reserveSupply, m.account.assetDecimals)}</td> */}
                       <td className="px-4 py-3 text-right">{formatTokenAmount(m.account.committedReserve, m.account.assetDecimals)}</td>
-                      <td className="px-4 py-3 text-right">${tokensToMoney(m.account.premiums, m.account.assetMint.toBase58(), m.account.assetDecimals, prices)}</td>
+                      <td className="px-4 py-3 text-right">${tokensToMoney(m.account.premiums, m.account.assetMint.toBase58(), m.account.assetDecimals, prices, 0)}</td>
                       {/* <td className="px-4 py-3 text-right">{formatTokenAmount(m.account.premiums, m.account.assetDecimals)}</td> */}
                       <td className="px-4 py-3 text-right">{formatTokenAmount(m.account.lpMinted, m.account.assetDecimals)}</td>
                       <td><button 

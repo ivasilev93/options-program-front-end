@@ -2,73 +2,49 @@ import { useEffect, useState } from "react"
 import { useNavigate } from "react-router";
 import { useMarket } from "@/app/common/market-context";
 import { IoIosArrowBack } from "react-icons/io";
-import { IoSettingsOutline } from "react-icons/io5";
 import { optionsProgram } from './liquidity-providers-data-access'
 import { getTokenPrice } from "@/app/common/token-manager";
-// import { publicKey } from "@coral-xyz/anchor/dist/cjs/utils";
-import { PublicKey } from "@solana/web3.js";
-import { getAssociatedTokenAddress } from "@solana/spl-token";
 import { useWallet } from "@solana/wallet-adapter-react";
-// import { formatNumber, formatUSD } from "@/lib/utils"; // Assuming you have utility functions
+import { DepositForm, WithdrawForm } from "./luquidity-providers-ui";
 
 export default function LiquidityProvidersFeature() {
   const navigate = useNavigate();
   const { publicKey } = useWallet();
   const { selectedMarket } = useMarket();
-  const [amount, setAmount] = useState("");
-  const [usdAmount, setUsdAmount] = useState("");
-  const [slippage, setSlippage] = useState(0.5); // Default 0.5%
-  const [showSlippageSettings, setShowSlippageSettings] = useState(false);
-  const [estimatedLpTokens, setEstimatedLpTokens] = useState(0);
-  const [userLpTokens, setUserLpTokens] = useState(0);
-  const [assetPrice, setAssetPrice] = useState(null);
-  const { depositMarket, getUserLpBalance } = optionsProgram();
+  const [userLpTokens, setUserLpTokens] = useState({});
+  const [assetPrice, setAssetPrice] = useState(0);
+  const { getUserLpBalance } = optionsProgram();
   const [actionType, setActionType] = useState("DEPOSIT");
+  const [priceChange, setPriceChange] = useState({ value: 0, isPositive: true });
   
   useEffect(() => {
     if (selectedMarket) {
         const fetchPrice = async () => {
             // Choose one of the methods above based on your oracle source
             const price = await getTokenPrice(selectedMarket.account.assetMint.toBase58());
-            setAssetPrice(price);
+            if (assetPrice && price) {
+              const change = price - assetPrice;
+              setPriceChange({ value: change, isPositive: change >= 0 });
+            }
+            setAssetPrice(Number(price));
           };
           
           fetchPrice();
-          // Optional: Set up interval to update price regularly
-          const interval = setInterval(fetchPrice, 5000); // every 5 seconds
-          
+          console.log('qweqwe', priceChange)
+          const interval = setInterval(fetchPrice, 5000); // every 5 seconds          
           return () => clearInterval(interval);
     } else {
         navigate('/');
     }
   }, [selectedMarket, navigate]);
-  
-  // Handle amount changes
-  useEffect(() => {
-    if (amount) {
-      const usdValue = parseFloat(amount) * (assetPrice ?? 0);
-      setUsdAmount(usdValue.toFixed(2));
-      
-      // Calculate estimated LP tokens (simplified for demo)
-      // In production this would involve a more complex calculation based on the market state
-      const lpEstimate = parseFloat(amount) * (selectedMarket?.account.lpMinted / 
-        (selectedMarket?.account.reserveSupply + selectedMarket?.account.committedReserve));
-      setEstimatedLpTokens(isNaN(lpEstimate) ? 0 : lpEstimate);
-    } else {
-      setUsdAmount("");
-      setEstimatedLpTokens(0);
-    }
-  }, [amount, selectedMarket]);
-  
+
   //Fetch user LPtokens
   useEffect(() => {
     const fetchUserLpBalance = async () => {
       if (!selectedMarket || !publicKey) return;
 
       try {
-        console.log('hellloo')
         const tokenBalance = await getUserLpBalance(selectedMarket.account.id, publicKey.toBase58());
-        console.log('hellloo: tokenBalance', tokenBalance)
 
         setUserLpTokens(tokenBalance);
       } catch (err) {
@@ -80,16 +56,6 @@ export default function LiquidityProvidersFeature() {
     fetchUserLpBalance();
   }, [selectedMarket, publicKey])
 
-  // Handle USD amount changes
-  const handleUsdChange = (value: any) => {
-    setUsdAmount(value);
-    if (value) {
-      const tokenAmount = parseFloat(value) / (assetPrice ?? 0);
-      setAmount(tokenAmount.toFixed(6));
-    } else {
-      setAmount("");
-    }
-  };
   
   const formatBNtoUsd = (bn: any, decimals = 0) => {
     if (!bn) return "0";
@@ -108,7 +74,6 @@ export default function LiquidityProvidersFeature() {
     const premiums = selectedMarket.account.premiums.toNumber();
     const totalReserve = selectedMarket.account.reserveSupply.toNumber();
     if (totalReserve === 0) return "0%";
-    console.log('+++', premiums, totalReserve, (premiums / totalReserve))
     return ((premiums / totalReserve) * 100).toFixed(2) + "%";
   };
   
@@ -116,31 +81,7 @@ export default function LiquidityProvidersFeature() {
   if (!selectedMarket) {
     return null;
   }
-  
-  const handleDeposit = async () => {
-
-    const amountInTokens = parseFloat(amount) * Math.pow(10, selectedMarket.account.assetDecimals);
-    console.log(slippage/100)
-    const slippageDecimal = slippage/100;
-    const minAmountOut = 1; //amountInTokens * (1 - slippageDecimal);
-
-    const depositPayload = {
-        amount: amountInTokens,
-        min_amount_out: minAmountOut,
-        ix: selectedMarket.account.id,
-        mint: selectedMarket.account.assetMint.toBase58()
-    };
-
-    console.log('payl', depositPayload)
-
-    try {
-        await depositMarket.mutateAsync(depositPayload);
-    } catch(err) {
-        console.log('Error here: ', err);
-    }
     
-  };
-  
   return (
     <div className="container mx-auto px-4 py-6 max-w-4xl">
       <div className="flex items-center mb-6">
@@ -157,13 +98,12 @@ export default function LiquidityProvidersFeature() {
       <div className="bg-white rounded-xl">
         <div className="bg-white px-6 py-4">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-sky-400 bg-clip-text text-transparent">
-            Stake into {selectedMarket.account.name}
+            {actionType === "DEPOSIT" ? "Deposit into" : "Withdraw from"} {selectedMarket.account.name}
           </h1>
           <p className="text-sm text-gray-600 opacity-80">
             Provide liquidity and earn premiums
           </p>
         </div>
-
         
         <div className="p-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -214,13 +154,26 @@ export default function LiquidityProvidersFeature() {
                     <p className="text-sm text-gray-500">Volatility</p>
                     <p className="text-lg font-medium">{selectedMarket.account.volatilityBps / 100}%</p>
                   </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Current Price</p>
+                    <div className="flex items-end">
+                        <span className="text-2xl font-bold">${assetPrice ? assetPrice.toFixed(2) : "..."}</span>
+                        {
+                        // priceChange.value !== 0 && 
+                        (
+                          <span className={`ml-2 text-sm ${priceChange.isPositive ? 'text-green-500' : 'text-red-500'}`}>
+                            {priceChange.isPositive ? '▲' : '▼'} ${Math.abs(priceChange.value).toFixed(4)}
+                          </span>
+                        )}
+                      </div>
+                  </div>
                 </div>
               </div>
 
               <div className="py-2">
                 <p className="text-sm text-gray-500 mb-1">Your LP token balance</p>
                 <p className="font-mono text-sm p-2 rounded break-all">
-                  {userLpTokens}
+                  {userLpTokens?.value?.uiAmount ?? 0}
                 </p>
               </div>
               
@@ -258,7 +211,7 @@ export default function LiquidityProvidersFeature() {
                       }`}
                       onClick={() => setActionType("DEPOSIT")}
                     >
-                      Stake
+                      Deposit
                     </button>
                     <button 
                       className={`py-2 px-4 rounded-lg font-medium transition-colors ${
@@ -273,87 +226,11 @@ export default function LiquidityProvidersFeature() {
                   </div>
                 </div>
               
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm text-gray-600 mb-2">Amount</label>
-                  <div className="relative rounded-lg border border-gray-200 bg-white">
-                    <input 
-                      type="number" 
-                      value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
-                      className="w-full p-3 outline-none" 
-                      placeholder="0.00"
-                    />
-                    <div className="absolute right-3 top-3 bg-gray-100 px-2 py-1 rounded text-sm">
-                      {selectedMarket.account.name}
-                    </div>
-                  </div>
-                </div>
-                
-                <div>
-                  <label className="block text-sm text-gray-600 mb-2">USD Equivalent</label>
-                  <div className="relative rounded-lg border border-gray-200 bg-white">
-                    <input 
-                      type="number" 
-                      value={usdAmount}
-                      onChange={(e) => handleUsdChange(e.target.value)}
-                      className="w-full p-3 outline-none" 
-                      placeholder="0.00"
-                    />
-                    <div className="absolute right-3 top-3 bg-gray-100 px-2 py-1 rounded text-sm">
-                      USD
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="py-3">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Estimated LP tokens (Apprx.):</span>
-                    <span className="font-medium">{estimatedLpTokens.toFixed(6)}</span>
-                  </div>
-                </div>
-                
-                <div className="py-2">
-                  <div className="flex justify-between items-center mb-2">
-                    <div className="flex items-center">
-                      <span className="text-sm text-gray-600">Slippage Tolerance</span>
-                      <button 
-                        onClick={() => setShowSlippageSettings(!showSlippageSettings)}
-                        className="ml-2 text-gray-400 hover:text-gray-600"
-                      >
-                        <IoSettingsOutline size={16} />
-                      </button>
-                    </div>
-                    <span className="text-sm font-medium">{slippage}%</span>
-                  </div>
-                  
-                  {showSlippageSettings && (
-                    <div className="bg-white p-3 rounded-lg shadow-md mb-3">
-                      <input
-                        type="range"
-                        min="0.1"
-                        max="5"
-                        step="0.1"
-                        value={slippage}
-                        onChange={(e) => setSlippage(parseFloat(e.target.value))}
-                        className="w-full"
-                      />
-                      <div className="flex justify-between text-xs text-gray-500 mt-1">
-                        <span>0.1%</span>
-                        <span>5%</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-                
-                <button 
-                  onClick={handleDeposit}
-                  disabled={!amount || parseFloat(amount) <= 0}
-                  className="w-full bg-blue-700 hover:bg-blue-800 disabled:bg-gray-300 text-white py-3 px-4 rounded-lg font-medium transition-colors"
-                >
-                  {actionType === "DEPOSIT" ? "Stake" : "Withdraw"}
-                </button>
-              </div>
+              { actionType === "DEPOSIT" ?
+                <DepositForm assetPrice={assetPrice} />
+                :
+                <WithdrawForm assetPrice={assetPrice} />
+              }             
             </div>
           </div>
         </div>

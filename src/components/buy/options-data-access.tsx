@@ -1,5 +1,5 @@
 import { getOptionsProgram, getOptionsProgramId } from '../../contract/options-program-exports'
-import { ASSOCIATED_TOKEN_PROGRAM_ID, createAssociatedTokenAccountInstruction, createSyncNativeInstruction, getAssociatedTokenAddress, NATIVE_MINT, TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from '@solana/spl-token'
+import { ASSOCIATED_TOKEN_PROGRAM_ID, createAssociatedTokenAccountInstruction, createSyncNativeInstruction, getAssociatedTokenAddress, getMint, NATIVE_MINT, TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from '@solana/spl-token'
 import { useConnection, useWallet } from '@solana/wallet-adapter-react'
 import {
     Cluster,
@@ -40,24 +40,32 @@ export function optionsProgram() {
             strikePrice: number,
             expiryStamp: number,
             quantity: number,
-            mint: string
+            mint: string,
+            estPremium: number,
         }) => {
-            const { marketIx, option, strikePrice, expiryStamp, quantity, mint } = input;
+            const { marketIx, option, strikePrice, expiryStamp, quantity, mint, estPremium } = input;
             const signer = provider.wallet.publicKey;
             const mintAddr = new PublicKey(mint);
             const solUsdPythAddr = new PublicKey('7UVimffxr9ow1uXYxsr4LHAcV58mLzhmwaeKvJ1pjLiE');
 
             const user_asset_ata: PublicKey = await getAssociatedTokenAddress(mintAddr, signer, false);
+            const mintInfo = await getMint(connection, mintAddr, undefined, TOKEN_PROGRAM_ID);
             let transaction = new Transaction();            
 
-            const amount = 1000000000; //TODO: Estimated premium amount
+            console.log("estPremium", estPremium)
+
+            const requiredTokens = estPremium * 1.1 * Math.pow(10, mintInfo.decimals); //add 10%
+            console.log("requiredTokens", requiredTokens)
+            console.log("mintInfo", mintInfo.decimals)
             //NEEDS slippage constraints also...
 
-            const tokenDiff = await checkUserTokenAmount(mintAddr, signer, connection, amount);
+            const tokenDiff = await checkUserTokenAmount(mintAddr, signer, connection, requiredTokens);
             console.log("tokenDiff", tokenDiff)
 
             if (tokenDiff > 0) {
                 if (mint == NATIVE_MINT.toBase58()) {
+                    console.log("syncing")
+
                     await syncNativeTokenAmounts(signer, connection, tokenDiff, transaction);
                 }
                 else {   
