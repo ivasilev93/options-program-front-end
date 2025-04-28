@@ -18,6 +18,7 @@ export default function OptionsBuyingFeature() {
   const [slippage, setSlippage] = useState(0.5); // Default 0.5%
   const [showSlippageSettings, setShowSlippageSettings] = useState(false);
   const [estimatedPremium, setEstimatedPremium] = useState(0);
+  const [estimatedPremiumTokens, setEstimatedPremiumTokens] = useState(0);
   const [assetPrice, setAssetPrice] = useState(0);
   const [priceChange, setPriceChange] = useState({ value: 0, isPositive: true });
   const { buyOption } = optionsProgram();
@@ -59,7 +60,7 @@ export default function OptionsBuyingFeature() {
       const volatility= (selectedMarket?.account.volatilityBps ?? 0) / 10000;
       
       if (optionType === "CALL") {
-        const [, usdPremium] = calculatePremium(
+        const [tokens, usdPremium] = calculatePremium(
           strikePriceFloat,
           assetPrice,
           timeToExpityInYears,
@@ -68,8 +69,9 @@ export default function OptionsBuyingFeature() {
           selectedMarket?.account.assetDecimals ?? 0
         );
         setEstimatedPremium(usdPremium);
+        setEstimatedPremiumTokens(tokens);
       } else {
-        const [, usdPremium] = calculatePremium(
+        const [tokens, usdPremium] = calculatePremium(
           strikePriceFloat,
           assetPrice,
           timeToExpityInYears,
@@ -78,6 +80,7 @@ export default function OptionsBuyingFeature() {
           selectedMarket?.account.assetDecimals ?? 0
         );
         setEstimatedPremium(usdPremium);
+        setEstimatedPremiumTokens(tokens);
       }
     } else {
       setEstimatedPremium(0);
@@ -119,7 +122,7 @@ export default function OptionsBuyingFeature() {
         expiryStamp: expiryTimestamp,
         quantity: quantity,
         mint: selectedMarket.account.assetMint.toBase58(),
-        estPremium: estimatedPremium
+        estPremium: estimatedPremiumTokens
     };
 
     console.log('payload: ', buyOptionPayload);

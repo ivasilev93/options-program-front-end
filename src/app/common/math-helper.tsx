@@ -6,10 +6,9 @@ export function estimateWithdrawAmount(
     marketPremiums: number,
     marketCommittedReserve: number
 ) {
+
     if (lpTokensToBurn <= 0) {
-        return [0, 0];
-    }
-    if (lpMinted <= lpTokensToBurn) {
+        console.log('yoo');
         return [0, 0];
     }
 
@@ -114,7 +113,7 @@ export function calculatePremium(
     volatility: number,
     optionType: "CALL" | "PUT",
     assetDecimals: number
-  ): [bigint, number] {
+  ): [number, number] {
     console.log(
       `Params: Strike: ${strikePrice}, Spot: ${spotPrice}, Time: ${timeToExpiry}, Vol: ${volatility}, Type: ${optionType}, Decimals: ${assetDecimals}`
     );
@@ -146,10 +145,12 @@ export function calculatePremium(
   
     const usdPerToken = s;
     const premiumInTokens = premium / usdPerToken;
+
     const tokenScaling = Math.pow(10, assetDecimals);
   
-    // Scale to bigint with appropriate decimal precision
-    const premiumScaled = BigInt(Math.round(premiumInTokens * tokenScaling));
+    // Potential round err
+    const premiumScaled = premiumInTokens * tokenScaling;
+
     
     return [premiumScaled, premium];
   }

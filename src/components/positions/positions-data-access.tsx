@@ -76,7 +76,10 @@ export function optionsProgram({ account }: { account: PublicKey }) {
           );      
 
           const exerciseSign = await program.methods
-          .exercise(marketIx, optionIx)
+          .exercise({
+            marketIx: marketIx, 
+            optionId: optionIx
+          })
           .accountsStrict({
               signer: signer,
               account: userAcc,

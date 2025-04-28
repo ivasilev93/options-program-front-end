@@ -49,17 +49,13 @@ export function optionsProgram() {
             const solUsdPythAddr = new PublicKey('7UVimffxr9ow1uXYxsr4LHAcV58mLzhmwaeKvJ1pjLiE');
 
             const user_asset_ata: PublicKey = await getAssociatedTokenAddress(mintAddr, signer, false);
-            const mintInfo = await getMint(connection, mintAddr, undefined, TOKEN_PROGRAM_ID);
-            let transaction = new Transaction();            
+            // const mintInfo = await getMint(connection, mintAddr, undefined, TOKEN_PROGRAM_ID);
+            let transaction = new Transaction();
+            const tokensRequired = estPremium * quantity;            
 
             console.log("estPremium", estPremium)
 
-            const requiredTokens = estPremium * 1.1 * Math.pow(10, mintInfo.decimals); //add 10%
-            console.log("requiredTokens", requiredTokens)
-            console.log("mintInfo", mintInfo.decimals)
-            //NEEDS slippage constraints also...
-
-            const tokenDiff = await checkUserTokenAmount(mintAddr, signer, connection, requiredTokens);
+            const tokenDiff = await checkUserTokenAmount(mintAddr, signer, connection, tokensRequired + 1);
             console.log("tokenDiff", tokenDiff)
 
             if (tokenDiff > 0) {
@@ -117,10 +113,10 @@ export function optionsProgram() {
             console.log('payload', 
                 {
                     marketIx: marketIx,
-                option: option === "CALL" ? { call: {} } : { put: {} },
-                strikePriceUsd: strikePrice,
-                expiryStamp: expiryStamp,
-                quantity: quantity
+                    option: option === "CALL" ? { call: {} } : { put: {} },
+                    strikePriceUsd: strikePrice,
+                    expiryStamp: expiryStamp,
+                    quantity: quantity
                 }
             )
 

@@ -264,7 +264,7 @@ export type OptionsProgram = {
               },
               {
                 "kind": "arg",
-                "path": "ix"
+                "path": "params.ix"
               }
             ]
           }
@@ -287,7 +287,7 @@ export type OptionsProgram = {
               },
               {
                 "kind": "arg",
-                "path": "ix"
+                "path": "params.ix"
               }
             ]
           }
@@ -316,7 +316,7 @@ export type OptionsProgram = {
               },
               {
                 "kind": "arg",
-                "path": "ix"
+                "path": "params.ix"
               }
             ]
           }
@@ -352,7 +352,7 @@ export type OptionsProgram = {
               },
               {
                 "kind": "arg",
-                "path": "ix"
+                "path": "params.ix"
               }
             ]
           }
@@ -367,24 +367,12 @@ export type OptionsProgram = {
       ],
       "args": [
         {
-          "name": "fee",
-          "type": "u64"
-        },
-        {
-          "name": "name",
-          "type": "string"
-        },
-        {
-          "name": "ix",
-          "type": "u16"
-        },
-        {
-          "name": "priceFeed",
-          "type": "string"
-        },
-        {
-          "name": "volatilityBps",
-          "type": "u32"
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "createMarketParams"
+            }
+          }
         }
       ]
     },
@@ -452,7 +440,7 @@ export type OptionsProgram = {
               },
               {
                 "kind": "arg",
-                "path": "marketIx"
+                "path": "params.market_ix"
               }
             ]
           }
@@ -481,7 +469,7 @@ export type OptionsProgram = {
               },
               {
                 "kind": "arg",
-                "path": "marketIx"
+                "path": "params.market_ix"
               }
             ]
           }
@@ -498,12 +486,12 @@ export type OptionsProgram = {
       ],
       "args": [
         {
-          "name": "marketIx",
-          "type": "u16"
-        },
-        {
-          "name": "optionId",
-          "type": "u8"
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "exerciseOptionParams"
+            }
+          }
         }
       ]
     },
@@ -1007,43 +995,53 @@ export type OptionsProgram = {
     },
     {
       "code": 6005,
+      "name": "underflow",
+      "msg": "underflow"
+    },
+    {
+      "code": 6006,
       "name": "ordersLimitExceeded",
       "msg": "ordersLimitExceeded"
     },
     {
-      "code": 6006,
+      "code": 6007,
       "name": "invalidExpiry",
       "msg": "invalidExpiry"
     },
     {
-      "code": 6007,
+      "code": 6008,
       "name": "insufficientColateral",
       "msg": "insufficientColateral"
     },
     {
-      "code": 6008,
+      "code": 6009,
       "name": "invalidPriceFeed",
       "msg": "invalidPriceFeed"
     },
     {
-      "code": 6009,
+      "code": 6010,
       "name": "exerciseIsOverdue",
       "msg": "exerciseIsOverdue"
     },
     {
-      "code": 6010,
+      "code": 6011,
       "name": "insufficientShares",
       "msg": "insufficientShares"
     },
     {
-      "code": 6011,
+      "code": 6012,
       "name": "invalidState",
       "msg": "invalidState"
     },
     {
-      "code": 6012,
+      "code": 6013,
       "name": "premiumCalcError",
       "msg": "premiumCalcError"
+    },
+    {
+      "code": 6014,
+      "name": "invalidPrices",
+      "msg": "invalidPrices"
     }
   ],
   "types": [
@@ -1080,6 +1078,34 @@ export type OptionsProgram = {
       }
     },
     {
+      "name": "createMarketParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "fee",
+            "type": "u64"
+          },
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "ix",
+            "type": "u16"
+          },
+          {
+            "name": "priceFeed",
+            "type": "string"
+          },
+          {
+            "name": "volatilityBps",
+            "type": "u32"
+          }
+        ]
+      }
+    },
+    {
       "name": "depositIx",
       "type": {
         "kind": "struct",
@@ -1095,6 +1121,22 @@ export type OptionsProgram = {
           {
             "name": "ix",
             "type": "u16"
+          }
+        ]
+      }
+    },
+    {
+      "name": "exerciseOptionParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "marketIx",
+            "type": "u16"
+          },
+          {
+            "name": "optionId",
+            "type": "u8"
           }
         ]
       }

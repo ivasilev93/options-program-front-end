@@ -154,7 +154,7 @@ export function WithdrawForm({  assetPrice }: { assetPrice: any }) {
     const [lpAmount, setAmount] = useState("");
     const [usdAmount, setUsdAmount] = useState("");
     const [slippage, setSlippage] = useState(0.5); // Default 0.5%
-    const [estimatedLpTokens, setEstimatedLpTokens] = useState(0);
+    const [estimatedAssetTokens, setEstimatedAssetTokens] = useState(0);
     const [showSlippageSettings, setShowSlippageSettings] = useState(false);
     const { selectedMarket } = useMarket();
     const { withdrawMarket  } = optionsProgram();
@@ -173,16 +173,18 @@ export function WithdrawForm({  assetPrice }: { assetPrice: any }) {
                 selectedMarket?.account.premiums.toNumber(),
                 selectedMarket?.account.committedReserve.toNumber(),
             );
+            console.log('withdraw amnt', withdrawEstimation[0]);
+            console.log('lp to burn', withdrawEstimation[1]);
             const estimatedBaseAssetTokenUnits = withdrawEstimation[0];
 
             const estimatedTokens = estimatedBaseAssetTokenUnits / Math.pow(10, selectedMarket?.account.assetDecimals ?? 0);        
-            setEstimatedLpTokens(estimatedTokens);
+            setEstimatedAssetTokens(estimatedTokens);
 
             const usdValue = parseFloat(lpAmount) * (assetPrice ?? 0);
             setUsdAmount(usdValue.toFixed(2));
         } else {
           setUsdAmount("");
-          setEstimatedLpTokens(0);
+          setEstimatedAssetTokens(0);
         }
       }, [lpAmount, selectedMarket]);
 
@@ -190,7 +192,7 @@ export function WithdrawForm({  assetPrice }: { assetPrice: any }) {
 
         const amountTokens = parseFloat(lpAmount) * Math.pow(10, selectedMarket?.account.assetDecimals ?? 0);
         const slippageDecimal = slippage/100;
-        const minAmountOut = 1; //amountTokens * (1 - slippageDecimal);
+        const minAmountOut = estimatedAssetTokens * Math.pow(10, selectedMarket?.account.assetDecimals ?? 0) * (1 - slippageDecimal);
     
         const withdrawPayload = {
           lp_tokens_to_burn: amountTokens,
@@ -232,7 +234,7 @@ export function WithdrawForm({  assetPrice }: { assetPrice: any }) {
                           <div className="relative rounded-lg border border-gray-200 bg-white">
                             <input 
                               type="number" 
-                              value={estimatedLpTokens}
+                              value={estimatedAssetTokens}
                               // onChange={(e) => handleUsdChange(e.target.value)}
                               className="w-full p-3 outline-none" 
                               placeholder="0.00"

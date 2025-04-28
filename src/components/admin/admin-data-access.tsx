@@ -95,13 +95,13 @@ export function optionsProgram() {
 
                 // Call the program method
                 const createMarketIx = await program.methods
-                .createMarket(
-                  new BN(fee),
-                  name,
-                  ix,
-                  priceFeed,
-                  volatility
-                )
+                .createMarket({
+                  fee: new BN(fee),
+                  name: name,
+                  ix: ix,
+                  priceFeed: priceFeed,
+                  volatilityBps: volatility
+                })
                 .accountsStrict({
                   signer: signer,
                   assetMint: mint,

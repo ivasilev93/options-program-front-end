@@ -20,7 +20,7 @@ export async function checkUserTokenAmount(mintAddr: PublicKey, user: PublicKey,
 
     const tokenBalanceInfo = await connection.getTokenAccountBalance(userTokenAddrr);    
 
-    const tokenBalance = tokenBalanceInfo?.value.uiAmount || 0;
+    const tokenBalance = Number(tokenBalanceInfo?.value.amount) || 0;
     console.log('user token abalance', tokenBalance);
     const amountNeeded = tokenBalance - tokenAmount;
     console.log("tokenAmount", tokenAmount)
