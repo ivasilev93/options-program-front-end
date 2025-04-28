@@ -6,8 +6,10 @@
 Clone the onchain program repo and run a local validator:
 ```bash
 solana-test-validator --bind-address 0.0.0.0 --url https://api.mainnet-beta.solana.com --ledger .anchor/test-ledger --rpc-port 8899 --clone 7UVimffxr9ow1uXYxsr4LHAcV58mLzhmwaeKvJ1pjLiE --reset
+anchor deploy
 ```
 
+Clone the frontend repo and run a dev server:
 ```bash
 git clone https://github.com/ivasilev93/options-program-front-end.git
 cd options-program-front-end
