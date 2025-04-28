@@ -131,12 +131,11 @@ export default function OptionsBuyingFeature() {
     try {
         await buyOption.mutateAsync(buyOptionPayload);
     } catch(err) {
-        console.log('Error here: ', err);
+        console.log('Error: ', err);
     }
   };
 
   const handleExpiryPreset = (days: number) => {
-    console.log('daysss', days)
     setExpiryDays(days);
   };
   

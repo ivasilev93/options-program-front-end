@@ -25,8 +25,6 @@ export interface Market {
     useEffect(() => {
       const fetchPrices = async () => {
         if (!markets.data) return;
-
-        console.log('markets', markets.data)
   
         setMarkets(markets.data);
         const mintAddresses = markets.data.map((m) => m.account.assetMint.toBase58());
@@ -37,9 +35,7 @@ export interface Market {
               .then((price) => ({ mint, price }))
               .catch(() => ({ mint, price: 0 })) // fallback on failure
           )
-        );
-  
-        console.log('--', priceResults);      
+        );   
   
         const priceFeed: PriceFeed[] = priceResults.map(({ mint, price }) => ({
           mint,

@@ -8,8 +8,6 @@ import { formatNumber, tokensToMoney } from '@/app/common/token-manager';
 export function PositionsList({ account }: { account: PublicKey }) {
     const { getUserAccount, exercise } = optionsProgram({ account });
     const { allMarkets, prices } = useMarket();
-    console.log('allMarkets', allMarkets);
-    console.log('prices', prices);
 
     const descaleUsdPrice = (value: number | BN) => {
       const numValue = BN.isBN(value) ? value.toNumber() : value;

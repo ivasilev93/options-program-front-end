@@ -51,16 +51,12 @@ export function optionsProgram() {
             const user_asset_ata: PublicKey = await getAssociatedTokenAddress(mintAddr, signer, false);
             // const mintInfo = await getMint(connection, mintAddr, undefined, TOKEN_PROGRAM_ID);
             let transaction = new Transaction();
-            const tokensRequired = estPremium * quantity;            
-
-            console.log("estPremium", estPremium)
+            const tokensRequired = estPremium * quantity;  
 
             const tokenDiff = await checkUserTokenAmount(mintAddr, signer, connection, tokensRequired + 1);
-            console.log("tokenDiff", tokenDiff)
 
             if (tokenDiff > 0) {
                 if (mint == NATIVE_MINT.toBase58()) {
-                    console.log("syncing")
 
                     await syncNativeTokenAmounts(signer, connection, tokenDiff, transaction);
                 }

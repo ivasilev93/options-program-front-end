@@ -80,7 +80,6 @@ export async function getTokenPrice(assetMint: string) {
         const response = await fetch(`https://lite-api.jup.ag/price/v2?ids=${assetMint}`);
         const data = await response.json();
         const price = data?.data?.[assetMint]?.price || null;
-        console.log('price: ', price);
         return price;
       } catch (error) {
         console.error("Failed to fetch token price:", error);

@@ -99,7 +99,6 @@ export function optionsProgram({ account }: { account: PublicKey }) {
       },
       onError: (err) => {
         toast.error('Failed')
-        console.log('eee', err);
       }
   })
   

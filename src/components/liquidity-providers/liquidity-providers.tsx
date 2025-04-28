@@ -30,7 +30,6 @@ export default function LiquidityProvidersFeature() {
           };
           
           fetchPrice();
-          console.log('qweqwe', priceChange)
           const interval = setInterval(fetchPrice, 5000); // every 5 seconds          
           return () => clearInterval(interval);
     } else {

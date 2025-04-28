@@ -8,7 +8,6 @@ export function estimateWithdrawAmount(
 ) {
 
     if (lpTokensToBurn <= 0) {
-        console.log('yoo');
         return [0, 0];
     }
 
@@ -134,13 +133,11 @@ export function calculatePremium(
     let premium: number;
     if (optionType === "CALL") {
       premium = s * n_d1 - k * n_d2;
-      console.log('calling')
     } else {
       // PUT option
       const n_neg_d2 = approximateNormalCdf(-d2); // N(-d2)
       const n_neg_d1 = approximateNormalCdf(-d1); // N(-d1)
       premium = k * n_neg_d2 - s * n_neg_d1;
-      console.log('putting')
     }
   
     const usdPerToken = s;

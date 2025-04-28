@@ -43,7 +43,6 @@ export function DepositForm({  assetPrice }: { assetPrice: any }) {
     const handleDeposit = async () => {
 
         const amountInTokens = parseFloat(amount) * Math.pow(10, selectedMarket?.account.assetDecimals ?? 0);
-        console.log('slippage', slippage/100)
         const slippageDecimal = slippage/100;
         const minAmountOut = estimatedLpTokens * (1 - slippageDecimal) * Math.pow(10, selectedMarket?.account.assetDecimals ?? 0);
     
@@ -52,16 +51,13 @@ export function DepositForm({  assetPrice }: { assetPrice: any }) {
             min_amount_out: minAmountOut,
             ix: selectedMarket?.account.id ?? 0,
             mint: selectedMarket?.account.assetMint.toBase58() ?? ""
-        };
-    
-        console.log('payl', depositPayload)
+        };    
     
         try {
             await depositMarket.mutateAsync(depositPayload);
         } catch(err) {
             console.log('Error here: ', err);
-        }
-        
+        }        
       }
 
     return (
