@@ -1423,11 +1423,15 @@ export type OptionsProgram = {
             "type": "u8"
           },
           {
+            "name": "isUsed",
+            "type": "u8"
+          },
+          {
             "name": "padding",
             "type": {
               "array": [
                 "u8",
-                4
+                3
               ]
             }
           }

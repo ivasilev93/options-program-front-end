@@ -1417,11 +1417,15 @@
             "type": "u8"
           },
           {
+            "name": "is_used",
+            "type": "u8"
+          },
+          {
             "name": "padding",
             "type": {
               "array": [
                 "u8",
-                4
+                3
               ]
             }
           }
