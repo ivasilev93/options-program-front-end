@@ -1,19 +1,21 @@
 import { useEffect, useState } from "react";
-import { useMarket } from "@/app/common/market-context";
 import { IoSettingsOutline } from "react-icons/io5";
 import { estimateLpShares, estimateWithdrawAmount } from "@/app/common/math-helper";
-import { optionsProgram } from "./liquidity-providers-data-access";
 import { PublicKey } from "@solana/web3.js";
+// import { BN } from "@coral-xyz/anchor";
+import { MarketAccount, rpcCalls } from "@/app/common/web3";
+import { useTransactionToast } from "../ui/ui-layout";
+import toast from "react-hot-toast";
 
 
-export function DepositForm({  assetPrice }: { assetPrice: any }) {
+export function DepositForm({  assetPrice, onDeposit, selectedMarket }: { selectedMarket: MarketAccount, assetPrice: any, onDeposit: () => void }) {
+    const { depositIntoMarket } = rpcCalls();
     const [amount, setAmount] = useState("");
     const [usdAmount, setUsdAmount] = useState("");
     const [slippage, setSlippage] = useState(0.5); // Default 0.5%
     const [estimatedLpTokens, setEstimatedLpTokens] = useState(0);
     const [showSlippageSettings, setShowSlippageSettings] = useState(false);
-    const { selectedMarket } = useMarket();
-    const { depositMarket,  } = optionsProgram();
+    const transactionToast = useTransactionToast()
     
       useEffect(() => {
         if (amount) {
@@ -22,16 +24,16 @@ export function DepositForm({  assetPrice }: { assetPrice: any }) {
           
           // Calculate estimated LP tokens (simplified for demo)
           // In production this would involve a more complex calculation based on the market state
-          const amountInTokens = parseFloat(amount) * Math.pow(10, selectedMarket?.account.assetDecimals ?? 0);
+          const amountInTokens = parseFloat(amount) * Math.pow(10, selectedMarket.assetDecimals ?? 0);
           const estimatedTokenUnits = estimateLpShares(
               amountInTokens, 
               1, 
-              selectedMarket?.account.lpMinted.toNumber(), 
-              selectedMarket?.account.reserveSupply.toNumber(), 
-              selectedMarket?.account.premiums.toNumber(),
+              selectedMarket.lpMinted, 
+              selectedMarket.reserveSupply, 
+              selectedMarket.premiums,
             );
     
-          const estimatedTokens = estimatedTokenUnits / Math.pow(10, selectedMarket?.account.assetDecimals ?? 0);
+          const estimatedTokens = estimatedTokenUnits / Math.pow(10, selectedMarket.assetDecimals ?? 0);
       
           setEstimatedLpTokens(estimatedTokens);
         } else {
@@ -42,21 +44,23 @@ export function DepositForm({  assetPrice }: { assetPrice: any }) {
 
     const handleDeposit = async () => {
 
-        const amountInTokens = parseFloat(amount) * Math.pow(10, selectedMarket?.account.assetDecimals ?? 0);
+        const amountInTokens = parseFloat(amount) * Math.pow(10, selectedMarket.assetDecimals ?? 0);
         const slippageDecimal = slippage/100;
-        const minAmountOut = estimatedLpTokens * (1 - slippageDecimal) * Math.pow(10, selectedMarket?.account.assetDecimals ?? 0);
-    
-        const depositPayload = {
-            amount: amountInTokens,
-            min_amount_out: minAmountOut,
-            ix: selectedMarket?.account.id ?? 0,
-            mint: selectedMarket?.account.assetMint.toBase58() ?? ""
-        };    
+        const minAmountOut = estimatedLpTokens * (1 - slippageDecimal) * Math.pow(10, selectedMarket.assetDecimals ?? 0);  
     
         try {
-            await depositMarket.mutateAsync(depositPayload);
+            const signature = await depositIntoMarket(amountInTokens,
+              minAmountOut,
+              selectedMarket.id ?? 0,
+              selectedMarket.assetMint ?? "");
+            
+            transactionToast(signature);
+
+            // await depositMarket.mutateAsync(depositPayload);
+            onDeposit();
         } catch(err) {
-            console.log('Error here: ', err);
+            console.log('Error sending deposit tx: ', err);
+            toast.error('Failed')
         }        
       }
 
@@ -73,7 +77,7 @@ export function DepositForm({  assetPrice }: { assetPrice: any }) {
                               placeholder="0.00"
                             />
                             <div className="absolute right-3 top-3 bg-gray-100 px-2 py-1 rounded text-sm">
-                              {selectedMarket?.account.name}
+                              {selectedMarket.name}
                             </div>
                           </div>
                         </div>
@@ -146,37 +150,40 @@ export function DepositForm({  assetPrice }: { assetPrice: any }) {
     )
 }
 
-export function WithdrawForm({  assetPrice }: { assetPrice: any }) {
+export function WithdrawForm({  assetPrice, selectedMarket }: { assetPrice: any, selectedMarket: MarketAccount }) {
     const [lpAmount, setAmount] = useState("");
     const [usdAmount, setUsdAmount] = useState("");
     const [slippage, setSlippage] = useState(0.5); // Default 0.5%
     const [estimatedAssetTokens, setEstimatedAssetTokens] = useState(0);
     const [showSlippageSettings, setShowSlippageSettings] = useState(false);
-    const { selectedMarket } = useMarket();
-    const { withdrawMarket  } = optionsProgram();
+    const transactionToast = useTransactionToast()
+    const { withdrawMarket } = rpcCalls();
+    // const { selectedMarket } = useMarket();
+    // const { withdrawMarket  } = optionsProgram();
     
       useEffect(() => {
         if (lpAmount) {
 
             // Calculate estimated Asset tokens from LP tokens
             // LP tokens have same decimals as asset tokens
-            const lpAMountInBaseUnits = parseFloat(lpAmount) * Math.pow(10, selectedMarket?.account.assetDecimals ?? 0);
+            console.log('lp amount', lpAmount)
+            const lpAMountInBaseUnits = parseFloat(lpAmount) * Math.pow(10, selectedMarket.assetDecimals ?? 0);
 
             const withdrawEstimation: number[] = estimateWithdrawAmount(
                 lpAMountInBaseUnits,  
-                selectedMarket?.account.lpMinted.toNumber(), 
-                selectedMarket?.account.reserveSupply.toNumber(), 
-                selectedMarket?.account.premiums.toNumber(),
-                selectedMarket?.account.committedReserve.toNumber(),
+                selectedMarket.lpMinted, 
+                selectedMarket.reserveSupply, 
+                selectedMarket.premiums,
+                selectedMarket.committedReserve
             );
-            console.log('withdraw amnt', withdrawEstimation[0]);
-            console.log('lp to burn', withdrawEstimation[1]);
+            // console.log('withdraw amnt', withdrawEstimation[0]);
+            // console.log('lp to burn', withdrawEstimation[1]);
             const estimatedBaseAssetTokenUnits = withdrawEstimation[0];
 
-            const estimatedTokens = estimatedBaseAssetTokenUnits / Math.pow(10, selectedMarket?.account.assetDecimals ?? 0);        
+            const estimatedTokens = estimatedBaseAssetTokenUnits / Math.pow(10, selectedMarket.assetDecimals ?? 0);        
             setEstimatedAssetTokens(estimatedTokens);
 
-            const usdValue = parseFloat(lpAmount) * (assetPrice ?? 0);
+            const usdValue = estimatedTokens * (assetPrice ?? 0);
             setUsdAmount(usdValue.toFixed(2));
         } else {
           setUsdAmount("");
@@ -186,25 +193,29 @@ export function WithdrawForm({  assetPrice }: { assetPrice: any }) {
 
     const handleWithdraw = async () => {
 
-        const amountTokens = parseFloat(lpAmount) * Math.pow(10, selectedMarket?.account.assetDecimals ?? 0);
+        const amountTokens = parseFloat(lpAmount) * Math.pow(10, selectedMarket.assetDecimals ?? 0);
         const slippageDecimal = slippage/100;
-        const minAmountOut = estimatedAssetTokens * Math.pow(10, selectedMarket?.account.assetDecimals ?? 0) * (1 - slippageDecimal);
+        const minAmountOut = estimatedAssetTokens * Math.pow(10, selectedMarket.assetDecimals ?? 0) * (1 - slippageDecimal);
     
-        const withdrawPayload = {
-          lp_tokens_to_burn: amountTokens,
-          min_amount_out: minAmountOut,
-          ix: selectedMarket?.account.id ?? 0,
-          mint: selectedMarket?.account.assetMint ?? new PublicKey("")
-        };
-    
-        console.log('payl', withdrawPayload)
+        // const withdrawPayload = {
+        //   lp_tokens_to_burn: amountTokens,
+        //   min_amount_out: minAmountOut,
+        //   ix: selectedMarket.id ?? 0,
+        //   mint: selectedMarket.assetMint ?? new PublicKey("")
+        // };
     
         try {
-            await withdrawMarket.mutateAsync(withdrawPayload);
+              const signature = await withdrawMarket(
+                amountTokens,
+                minAmountOut,
+                selectedMarket.id,
+                new PublicKey(selectedMarket.assetMint));
+
+              transactionToast(signature);
         } catch(err) {
-            console.log('Error here: ', err);
+            console.log('Error sending withdraw tx: ', err);
+            toast.error('Failed')
         }
-        
     }
 
     return (
@@ -237,7 +248,7 @@ export function WithdrawForm({  assetPrice }: { assetPrice: any }) {
                               disabled
                             />
                             <div className="absolute right-3 top-3 bg-gray-100 px-2 py-1 rounded text-sm">
-                            {selectedMarket?.account.name}
+                            {selectedMarket?.name}
                             </div>
                           </div>
                         </div>

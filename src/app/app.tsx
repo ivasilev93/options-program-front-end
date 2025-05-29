@@ -8,7 +8,7 @@ const client = new QueryClient()
 
 export function App() {
   return (
-    <MarketProvider>
+    // <MarketProvider>
       <QueryClientProvider client={client}>
         <ClusterProvider>
           <SolanaProvider>
@@ -16,6 +16,6 @@ export function App() {
           </SolanaProvider>
         </ClusterProvider>
       </QueryClientProvider>
-    </MarketProvider>
+    // </MarketProvider> 
   )
 }

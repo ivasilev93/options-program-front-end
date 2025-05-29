@@ -864,6 +864,142 @@
           }
         }
       ]
+    },
+    {
+      "name": "update_market_vol",
+      "discriminator": [
+        196,
+        210,
+        98,
+        172,
+        255,
+        112,
+        230,
+        144
+      ],
+      "accounts": [
+        {
+          "name": "signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "market",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  97,
+                  114,
+                  107,
+                  101,
+                  116
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "params.ix"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "UpdateMarketVolParams"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "withdraw_fees",
+      "discriminator": [
+        198,
+        212,
+        171,
+        109,
+        144,
+        215,
+        174,
+        89
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "admin_token_acc",
+          "writable": true
+        },
+        {
+          "name": "asset_mint"
+        },
+        {
+          "name": "protocol_fees_vault",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  116,
+                  111,
+                  99,
+                  111,
+                  108,
+                  95,
+                  102,
+                  101,
+                  101,
+                  115,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "params.ix"
+              }
+            ]
+          }
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "WithdrawFeesParams"
+            }
+          }
+        }
+      ]
     }
   ],
   "accounts": [
@@ -979,63 +1115,93 @@
     },
     {
       "code": 6003,
+      "name": "InvalidQuantity",
+      "msg": "InvalidQuantity"
+    },
+    {
+      "code": 6004,
       "name": "DustAmount",
       "msg": "DustAmount"
     },
     {
-      "code": 6004,
+      "code": 6005,
       "name": "Overflow",
       "msg": "Overflow"
     },
     {
-      "code": 6005,
+      "code": 6006,
       "name": "Underflow",
       "msg": "Underflow"
     },
     {
-      "code": 6006,
+      "code": 6007,
       "name": "OrdersLimitExceeded",
       "msg": "OrdersLimitExceeded"
     },
     {
-      "code": 6007,
+      "code": 6008,
       "name": "InvalidExpiry",
       "msg": "InvalidExpiry"
     },
     {
-      "code": 6008,
+      "code": 6009,
       "name": "InsufficientColateral",
       "msg": "InsufficientColateral"
     },
     {
-      "code": 6009,
+      "code": 6010,
       "name": "InvalidPriceFeed",
       "msg": "InvalidPriceFeed"
     },
     {
-      "code": 6010,
+      "code": 6011,
       "name": "ExerciseIsOverdue",
       "msg": "ExerciseIsOverdue"
     },
     {
-      "code": 6011,
+      "code": 6012,
+      "name": "ExerciseTooEarly",
+      "msg": "ExerciseTooEarly"
+    },
+    {
+      "code": 6013,
       "name": "InsufficientShares",
       "msg": "InsufficientShares"
     },
     {
-      "code": 6012,
+      "code": 6014,
       "name": "InvalidState",
       "msg": "InvalidState"
     },
     {
-      "code": 6013,
+      "code": 6015,
       "name": "PremiumCalcError",
       "msg": "PremiumCalcError"
     },
     {
-      "code": 6014,
+      "code": 6016,
       "name": "InvalidPrices",
       "msg": "InvalidPrices"
+    },
+    {
+      "code": 6017,
+      "name": "CannotWithdraw",
+      "msg": "Cannot withdraw. Funds are collateral to active options"
+    },
+    {
+      "code": 6018,
+      "name": "NotImplemented",
+      "msg": "NotImplemented"
+    },
+    {
+      "code": 6019,
+      "name": "InvalidStrikePrice",
+      "msg": "InvalidStrikePrice"
+    },
+    {
+      "code": 6020,
+      "name": "InvalidVolatility",
+      "msg": "InvalidVolatility"
     }
   ],
   "types": [
@@ -1061,8 +1227,12 @@
             "type": "u64"
           },
           {
-            "name": "expiry_stamp",
-            "type": "i64"
+            "name": "expiry_setting",
+            "type": {
+              "defined": {
+                "name": "Expiry"
+              }
+            }
           },
           {
             "name": "quantity",
@@ -1093,7 +1263,23 @@
             "type": "string"
           },
           {
-            "name": "volatility_bps",
+            "name": "hour1_volatility_bps",
+            "type": "u32"
+          },
+          {
+            "name": "hour4_volatility_bps",
+            "type": "u32"
+          },
+          {
+            "name": "day1_volatility_bps",
+            "type": "u32"
+          },
+          {
+            "name": "day3_volatility_bps",
+            "type": "u32"
+          },
+          {
+            "name": "week_volatility_bps",
             "type": "u32"
           }
         ]
@@ -1131,6 +1317,29 @@
           {
             "name": "option_id",
             "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Expiry",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "HOUR1"
+          },
+          {
+            "name": "HOUR4"
+          },
+          {
+            "name": "DAY1"
+          },
+          {
+            "name": "DAY3"
+          },
+          {
+            "name": "WEEK"
           }
         ]
       }
@@ -1269,16 +1478,36 @@
             "type": "u64"
           },
           {
-            "name": "volatility_bps",
-            "type": "u32"
-          },
-          {
             "name": "price_feed",
             "type": "string"
           },
           {
             "name": "asset_decimals",
             "type": "u8"
+          },
+          {
+            "name": "hour1_volatility_bps",
+            "type": "u32"
+          },
+          {
+            "name": "hour4_volatility_bps",
+            "type": "u32"
+          },
+          {
+            "name": "day1_volatility_bps",
+            "type": "u32"
+          },
+          {
+            "name": "day3_volatility_bps",
+            "type": "u32"
+          },
+          {
+            "name": "week_volatility_bps",
+            "type": "u32"
+          },
+          {
+            "name": "vol_last_updated",
+            "type": "i64"
           }
         ]
       }
@@ -1394,6 +1623,10 @@
           },
           {
             "name": "premium",
+            "type": "u64"
+          },
+          {
+            "name": "premium_in_usd",
             "type": "u64"
           },
           {
@@ -1555,6 +1788,38 @@
       }
     },
     {
+      "name": "UpdateMarketVolParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "ix",
+            "type": "u16"
+          },
+          {
+            "name": "hour1_volatility_bps",
+            "type": "u32"
+          },
+          {
+            "name": "hour4_volatility_bps",
+            "type": "u32"
+          },
+          {
+            "name": "day1_volatility_bps",
+            "type": "u32"
+          },
+          {
+            "name": "day3_volatility_bps",
+            "type": "u32"
+          },
+          {
+            "name": "week_volatility_bps",
+            "type": "u32"
+          }
+        ]
+      }
+    },
+    {
       "name": "UserAccount",
       "serialization": "bytemuck",
       "repr": {
@@ -1608,6 +1873,18 @@
           },
           {
             "name": "Full"
+          }
+        ]
+      }
+    },
+    {
+      "name": "WithdrawFeesParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "ix",
+            "type": "u16"
           }
         ]
       }

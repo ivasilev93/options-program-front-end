@@ -1,18 +1,62 @@
 import { PublicKey } from '@solana/web3.js';
-import { optionsProgram } from './positions-data-access'
+// import { optionsProgram } from './positions-data-access'
 import { BN } from '@coral-xyz/anchor';
-import { useMarket } from "@/app/common/market-context";
-import { formatNumber, tokensToMoney } from '@/app/common/token-manager';
+import { useMarket, TokenInfo } from "@/app/common/market-context";
+import { fetchTokenData, formatNumber, tokensToMoney } from '@/app/common/token-manager';
+import { rpcCalls } from '@/app/common/web3';
+import { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
+import { useTransactionToast } from '../ui/ui-layout';
 
 
 export function PositionsList({ account }: { account: PublicKey }) {
-    const { getUserAccount, exercise } = optionsProgram({ account });
-    const { allMarkets, prices } = useMarket();
+    const transactionToast = useTransactionToast()
+    // const { getUserAccount, exercise } = optionsProgram({ account });
+    const { getUserAccount, exercise, fetchMarkets } = rpcCalls();
+    // const { allMarkets, prices } = useMarket();   
+    const [userOptions, setUserOptions] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [tokenData, setTokenData] = useState<Record<string, TokenInfo>>({});
+    const [markets, setMarkets] = useState<Record<number, any>>({});
+    const [refreshKey, setRefreshKey] = useState(0);
+
+    useEffect(() => {
+      const fetchUserAccount = async () => {
+          try {
+              setIsLoading(true);
+              const userAccount = await getUserAccount(account);
+              setUserOptions(userAccount.options || []);
+
+              const allMarkets = await fetchMarkets();
+              // console.log('allMarkets', allMarkets)
+
+              const marketsByKey = allMarkets.reduce((acc, market) => {
+                acc[Number(market.account.id)] = market.account.assetMint.toBase58();
+                return acc;
+              }, {} as Record<string, TokenInfo>);
+
+              // console.log('marketsByKey', marketsByKey)
+              setMarkets(marketsByKey);
+
+              const mintAddresses = allMarkets.map((m) => m.account.assetMint.toBase58());
+              const tokenData = await fetchTokenData(mintAddresses);
+              setTokenData(tokenData);
+              // console.log('tokenData', tokenData)
+
+          } catch (err) {
+              console.error('Failed to fetch user account:', err);
+          } finally {
+              setIsLoading(false);
+          }
+      };
+
+      fetchUserAccount();
+  }, [account, refreshKey]);
 
     const descaleUsdPrice = (value: number | BN) => {
       const numValue = BN.isBN(value) ? value.toNumber() : value;
-      const tvl = (numValue / Math.pow(10, 6));
-      return formatNumber(tvl, 2);
+      const tvl = (numValue / Math.pow(10, 8));
+      return formatNumber(tvl, 4);
     }
 
     const formatSolanaTimestamp = (expiry: BN) => {
@@ -28,14 +72,16 @@ export function PositionsList({ account }: { account: PublicKey }) {
 
     const onExercise = async (marketIx: number, optionIx: number, mint: string) => {
       try {
-        await exercise.mutateAsync({marketIx: marketIx, optionIx: optionIx, mint: mint});
+        const sign = await exercise(marketIx, optionIx, mint);
+        transactionToast(sign);
+        setRefreshKey((prev) => prev + 1);
       } catch(err) {
         console.log('Error here: ', err);
       }
     }
 
     const isIinitialized = (o: any) => {
-      return o.quantity.toNumber() > 0 && o.premium.toNumber() > 0 && o.expiry > 0
+      return o.isUsed == 1
     }
 
     return (
@@ -53,53 +99,52 @@ export function PositionsList({ account }: { account: PublicKey }) {
           
           <div className="p-4">
           <div className="space-y-6">
-        {getUserAccount.isLoading ? (
+        {isLoading ? (
           <div className="flex justify-center">
-            <span className="loading loading-spinner loading-lg"></span>
+            {/* <span className="loading loading-spinner loading-lg"></span> */}
           </div>
-        ) : getUserAccount.data?.options.length ? (
+        ) : userOptions.length ? (
           <div className="">
-          {/* <div className="overflow-x-auto"> */}
             <table className="table w-ful">
               <thead>
                 <tr className="bg-white">
                   <th className="text-base px-4 py-3">Market</th>
                   {/* <th className="text-base px-4 py-3 text-right">Name</th> */}
                   <th className="text-base px-4 py-3 text-right">Type</th>
+                  <th className="text-base px-4 py-3 text-right">Expiry</th>
                   <th className="text-base px-4 py-3 text-right">Strike price</th>
                   <th className="text-base px-4 py-3 text-right">Quantity</th>
-                  <th className="text-base px-4 py-3 text-right">Expiry</th>
                   <th className="text-base px-4 py-3 text-right">Premium (tokens)</th>
-                  <th className="text-base px-4 py-3 text-right">Premium (USD)</th>
+                  <th className="text-base px-4 py-3 text-right">Total Premium (USD)</th>
                 </tr>
               </thead>
               <tbody>
-                {getUserAccount.data?.options
-                  .filter(o => isIinitialized(o))
+                {userOptions.filter(o => isIinitialized(o))
                   .map((o) => {
-                  const market = allMarkets.find(r => r.account.id === o.marketIx)?.account;
-                  const marketMint = market?.assetMint?.toBase58();
-                  return (
-                    // <tr key={o.account.id} className="hover:bg-base-200 border-b border-base-300">
-                    <tr className="hover:bg-base-200 border-b border-base-300">
+                  return (                    
+                    <tr key={o.ix} className="hover:bg-base-200 border-b border-base-300">
                       <td className="px-4 py-3 font-medium">
                         <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white font-bold">
-                            {market?.name.charAt(0)}
+                          <div className="w-8 h-8 rounded-full overflow-hidden bg-white border border-gray-300">
+                            <img
+                              src={tokenData[markets[o.marketIx]]?.logoUrl}
+                              alt={tokenData[markets[o.marketIx]]?.symbol}
+                              className="w-full h-full object-cover"
+                            />
                           </div>
-                          <span>{market?.name}</span>
+                          <span>{tokenData[markets[o.marketIx]]?.symbol}</span>
                         </div>
                       </td>
                       {/* <td className="px-4 py-3 text-right">{market?.name}</td> */}
                       <td className="px-4 py-3 text-right">{o.optionType === 1 ? "CALL" : "PUT"}</td>
+                      <td className="px-4 py-3 text-right">{formatSolanaTimestamp(o.expiry)}</td>
                       <td className="px-4 py-3 text-right">${descaleUsdPrice(o.strikePrice)}</td>
                       <td className="px-4 py-3 text-right">{o.quantity.toNumber()}</td>
-                      <td className="px-4 py-3 text-right">{formatSolanaTimestamp(o.expiry)}</td>
                       <td className="px-4 py-3 text-right">{o.premium.toNumber()}</td>
-                      <td className="px-4 py-3 text-right">${tokensToMoney(o.premium, marketMint, market?.assetDecimals, prices, 2)}</td>       
+                      <td className="px-4 py-3 text-right">${descaleUsdPrice(o.premiumInUsd)}</td>       
                       <td><button 
                         className="bg-transparent font-semibold py-2 px-4 border border-blue-900 text-blue-900 hover:shadow-md hover:text-blue-700 rounded-md"
-                        onClick={() => onExercise(o.marketIx, o.ix, marketMint)} 
+                        onClick={() => onExercise(o.marketIx, o.ix, markets[o.marketIx])} 
                         >Exercise</button></td>
                     </tr>
                   )

@@ -15,6 +15,9 @@ export function estimateWithdrawAmount(
 
     // Calculate ownership ratio (using BigInt to prevent precision loss)
     const ownershipRatio = (BigInt(lpTokensToBurn) * BigInt(scale)) / BigInt(lpMinted);
+    console.log('lpTokensToBurn', lpTokensToBurn) 
+    console.log('lpMinted', lpMinted) 
+    console.log('ownershipRatio', ownershipRatio) 
 
     // Calculate market TVL
     const marketTvl = marketReserveSupply + marketPremiums;
@@ -24,6 +27,8 @@ export function estimateWithdrawAmount(
 
     // Calculate potential withdraw amount
     const potentialWithdrawAmount = Number((ownershipRatio * BigInt(marketTvl)) / BigInt(scale));
+    console.log('potentialWithdrawAmount', potentialWithdrawAmount) 
+
 
     // Calculate max withdrawable amount
     const uncommittedReserve = marketReserveSupply - marketCommittedReserve;
@@ -73,7 +78,7 @@ export function estimateLpShares(
 
     // Handle the case where no LP tokens have been minted yet
     if (lpMinted === 0) {
-        lpTokensToMint = baseAssetAmount;
+        lpTokensToMint = baseAssetAmount * 1000;
     } else {
         const scale = 1_000_000_000;
 
@@ -95,74 +100,131 @@ export function estimateLpShares(
     return lpTokensToMint;
 }
 
-/**
- * Calculates premium for a given market (asset), based on provided data 
- * @param strikePrice - strike price in USD
- * @param spotPrice - spot price in USD
- * @param timeToExpiry - time to expiry in years
- * @param volatility - annualized volatility (decimal, e.g., 0.5 for 50%)
- * @param optionType - "CALL" or "PUT"
- * @param assetDecimals - number of decimals for the asset
- * @returns [The premium amount in token units (scaled by the asset decimals), premium in USD]
- */
-export function calculatePremium(
-    strikePrice: number,
-    spotPrice: number,
-    timeToExpiry: number,
-    volatility: number,
-    optionType: "CALL" | "PUT",
-    assetDecimals: number
-  ): [number, number] {
-    console.log(
-      `Params: Strike: ${strikePrice}, Spot: ${spotPrice}, Time: ${timeToExpiry}, Vol: ${volatility}, Type: ${optionType}, Decimals: ${assetDecimals}`
+// Using BigInt for handling large integer calculations without precision loss
+const PRECISION = 100000000n;  // Same precision as Rust version
+const SECONDS_IN_YEAR = 31536000n;  // 365 days
+
+enum CustomError {
+  InvalidStrikePrice = "InvalidStrikePrice",
+  NotImplemented = "NotImplemented",
+  Overflow = "Overflow",
+  PremiumCalcError = "PremiumCalcError",
+}
+
+// Represents option expiry information
+interface Expiry {
+  toSeconds(): bigint;
+}
+
+
+// Helper function to require a condition or throw error
+function require(condition: boolean, errorMessage: CustomError): void {
+  if (!condition) {
+    throw new Error(errorMessage);
+  }
+}
+
+// Square root function for BigInt (integer approximation)
+function sqrt(value: bigint): bigint {
+  if (value < 0n) {
+    throw new Error("Cannot calculate square root of negative number");
+  }
+  if (value === 0n) return 0n;
+  
+  let x = value;
+  let y = (x + 1n) / 2n;
+  
+  while (y < x) {
+    x = y;
+    y = (x + value / x) / 2n;
+  }
+  
+  return x;
+}
+
+// Calculate call option premium using a simplified model suitable for on-chain execution
+function calculateCallPremium(
+  currentPrice: bigint,
+  strikePrice: bigint,
+  timeToExpiry: bigint,  // In years, scaled by PRECISION
+  volatility: bigint     // Annual volatility, scaled by PRECISION
+): bigint {
+  // Basic simplified model for demonstration
+  // 1. Intrinsic value component
+  const intrinsic = currentPrice > strikePrice ? currentPrice - strikePrice : 0n;
+  
+  // 2. Time value approximation
+  // For integer math, we use a simplified formula that approximates BSM
+  // volatility * price * sqrt(time_to_expiry)
+  
+  // Calculate sqrt using integer approximation
+  const timeSqrt = sqrt(timeToExpiry);
+  
+  // Time value component (simplified for integer math)
+  const timeValue = (currentPrice * volatility * timeSqrt) / (PRECISION * 10000n);
+  
+  // If deep out of money (current < 0.8 * strike), reduce premium
+  const moneynessFactor = currentPrice < (strikePrice * 8n) / 10n
+    ? (currentPrice * PRECISION) / strikePrice
+    : PRECISION;
+  
+  const timeValueAdjusted = (timeValue * moneynessFactor) / PRECISION;
+  const premiumPrice = intrinsic + timeValueAdjusted;
+  
+  return premiumPrice;
+}
+
+// Calculate option premium using adapted Black-Scholes with integer math
+function calculateOptionPremium(
+  strikePriceUsd: bigint,
+  spotPriceUsd: bigint,
+  timeToExpirySeconds: bigint,
+  assetDecimals: number,
+  vol: bigint,
+  optionType: String,
+  quantity: bigint
+): [bigint, bigint] {
+  // Validate parameters
+  require(strikePriceUsd > 0n, CustomError.InvalidStrikePrice);
+
+  console.log('calculateOptionPremium called: ', strikePriceUsd, spotPriceUsd, timeToExpirySeconds, assetDecimals, vol, optionType, quantity)
+
+  
+  // Get time to expiry in years (using integer division)
+  // const timeToExpirySeconds = expiry.toSeconds();
+  
+  const timeToExpiry = (timeToExpirySeconds * PRECISION) / SECONDS_IN_YEAR;
+  
+  // Choose appropriate volatility based on expiry time
+  
+  // Volatility as a scaled integer (bps to decimal equivalent)
+  const volatility = (vol * PRECISION) / 10000n;
+  
+  // Calculate premium based on option type
+  let scaledUsdPremium: bigint;
+  if (optionType === "CALL") {
+    scaledUsdPremium = calculateCallPremium(
+      spotPriceUsd,
+      strikePriceUsd,
+      timeToExpiry,
+      volatility
     );
-  
-    // Convert to numbers for calculations
-    const s = spotPrice;
-    const k = strikePrice;
-  
-    // Assumed risk-free rate of 0 - for simplicity
-    const d1 = (Math.log(s / k) + (volatility * volatility / 2.0) * timeToExpiry) / 
-               (volatility * Math.sqrt(timeToExpiry));
-    const d2 = d1 - volatility * Math.sqrt(timeToExpiry);
-  
-    // Calculate N(d1) and N(d2) using approximation function
-    const n_d1 = approximateNormalCdf(d1);
-    const n_d2 = approximateNormalCdf(d2);
-  
-    let premium: number;
-    if (optionType === "CALL") {
-      premium = s * n_d1 - k * n_d2;
-    } else {
-      // PUT option
-      const n_neg_d2 = approximateNormalCdf(-d2); // N(-d2)
-      const n_neg_d1 = approximateNormalCdf(-d1); // N(-d1)
-      premium = k * n_neg_d2 - s * n_neg_d1;
-    }
-  
-    const usdPerToken = s;
-    const premiumInTokens = premium / usdPerToken;
-
-    const tokenScaling = Math.pow(10, assetDecimals);
-  
-    // Potential round err
-    const premiumScaled = premiumInTokens * tokenScaling;
-
-    
-    return [premiumScaled, premium];
+  } else {
+    throw new Error(CustomError.NotImplemented);
   }
   
-  /**
-   * Approximates the standard normal cumulative distribution function (CDF) N(x)
-   * @param x - input value
-   * @returns Approximated CDF value
-   */
-  function approximateNormalCdf(x: number): number {
-    // Simple approximation for N(x)
-    const t = 1.0 / (1.0 + 0.2316419 * Math.abs(x));
-    const d = 0.3989423 * Math.exp(-x * x / 2.0);
-    const p = 1.0 - d * t * (0.31938153 + t * (-0.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429))));
-    
-    return x >= 0.0 ? p : 1.0 - p;
-  }
+  const totalScaledUsdPremium = scaledUsdPremium * quantity;
   
+  if (totalScaledUsdPremium <= 0n) {
+    console.log('Premium calculation erros -> totalScaledUsdPremium <= 0n')
+  }
+
+  const premiumInTokens = (totalScaledUsdPremium * BigInt(10 ** assetDecimals)) / spotPriceUsd;
+
+  return [totalScaledUsdPremium, premiumInTokens];
+}
+
+export {
+  CustomError,
+  calculateOptionPremium
+};

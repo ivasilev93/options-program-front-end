@@ -1,19 +1,26 @@
 import { useEffect, useState } from "react"
-import { useNavigate } from "react-router";
-import { useMarket } from "@/app/common/market-context";
+import { useNavigate, useLocation } from "react-router";
+// import { useMarket } from "@/app/common/market-context";
 import { IoIosArrowBack } from "react-icons/io";
 import { IoSettingsOutline } from "react-icons/io5";
-import { optionsProgram } from '../buy/options-data-access'
+// import { optionsProgram } from '../buy/options-data-access'
 import { getTokenPrice } from "@/app/common/token-manager";
 import { BN } from "@coral-xyz/anchor";
-import { calculatePremium } from "@/app/common/math-helper";
+import { calculateOptionPremium } from "@/app/common/math-helper";
+import { MarketAccount, rpcCalls } from "@/app/common/web3";
+import { TokenInfo } from "@/app/common/market-context";
+import toast from "react-hot-toast";
+import { useTransactionToast } from "../ui/ui-layout";
+// import { calculatePremium } from "@/app/common/math-helper";
 
 export default function OptionsBuyingFeature() {
   const navigate = useNavigate();
-  const { selectedMarket } = useMarket();
+  const transactionToast = useTransactionToast()
+  const { buyOption } = rpcCalls();
+  // const { selectedMarket } = useMarket();
   const [optionType, setOptionType] = useState("CALL");
   const [strikePrice, setStrikePrice] = useState("");
-  const [expiryDays, setExpiryDays] = useState(7);
+  const [expirySetting, setexpirySetting] = useState(7);
   const [quantity, setQuantity] = useState(0);
   const [slippage, setSlippage] = useState(0.5); // Default 0.5%
   const [showSlippageSettings, setShowSlippageSettings] = useState(false);
@@ -21,12 +28,17 @@ export default function OptionsBuyingFeature() {
   const [estimatedPremiumTokens, setEstimatedPremiumTokens] = useState(0);
   const [assetPrice, setAssetPrice] = useState(0);
   const [priceChange, setPriceChange] = useState({ value: 0, isPositive: true });
-  const { buyOption } = optionsProgram();
+  const location = useLocation();
+  const selectedMarket = location.state?.selectedMarket as MarketAccount;
+  const tokenData = location.state?.tokenData as TokenInfo;
+  // const { buyOption } = optionsProgram();
 
   useEffect(() => {
     if (selectedMarket) {
+      console.log('selected', selectedMarket)
+
         const fetchPrice = async () => {
-            const price = await getTokenPrice(selectedMarket.account.assetMint.toBase58());
+            const price = await getTokenPrice(selectedMarket.assetMint);
             if (assetPrice && price) {
                 const change = price - assetPrice;
                 setPriceChange({ value: change, isPositive: change >= 0 });
@@ -37,6 +49,9 @@ export default function OptionsBuyingFeature() {
         fetchPrice();
         const interval = setInterval(fetchPrice, 5000); // every 5 seconds          
         return () => clearInterval(interval);
+
+        //Incase rate limits are hit
+        // setAssetPrice(Number(tokenData.price))
     } else {
         navigate('/');
     }
@@ -55,37 +70,53 @@ export default function OptionsBuyingFeature() {
         return;
       }
 
-      const timeToExpityInYears = expiryDays / 365;
+      // const timeToExpityInYears = 0 ; //expiryDays / 365;
       
-      const volatility= (selectedMarket?.account.volatilityBps ?? 0) / 10000;
+      // const volatility= (selectedMarket?.account.volatilityBps ?? 0) / 10000;
+      console.log('expirySetting', expirySetting)
+
+      const vol = getVol(expirySetting);
+      const expiry = volToSecs(expirySetting);
+
+      console.log('vol', vol)
       
       if (optionType === "CALL") {
-        const [tokens, usdPremium] = calculatePremium(
-          strikePriceFloat,
-          assetPrice,
-          timeToExpityInYears,
-          volatility,
+        const [usdPremium, tokens] = calculateOptionPremium(
+          BigInt(Math.round(strikePriceFloat * Math.pow(10, 8))),
+          BigInt(Math.round(assetPrice * Math.pow(10, 8))),
+          BigInt(expiry),
+          selectedMarket.assetDecimals || 0,
+          BigInt(vol),
           "CALL",
-          selectedMarket?.account.assetDecimals ?? 0
-        );
-        setEstimatedPremium(usdPremium);
-        setEstimatedPremiumTokens(tokens);
+          BigInt(quantity)
+        )
+
+        // const [tokens, usdPremium] = calculatePremium(
+        //   strikePriceFloat,
+        //   assetPrice,
+        //   timeToExpityInYears,
+        //   volatility,
+        //   "CALL",
+        //   selectedMarket?.account.assetDecimals ?? 0
+        // );
+        setEstimatedPremium(Number(usdPremium) / Math.pow(10, 8));
+        setEstimatedPremiumTokens(Number(tokens));
       } else {
-        const [tokens, usdPremium] = calculatePremium(
-          strikePriceFloat,
-          assetPrice,
-          timeToExpityInYears,
-          volatility,
-          "PUT",
-          selectedMarket?.account.assetDecimals ?? 0
-        );
-        setEstimatedPremium(usdPremium);
-        setEstimatedPremiumTokens(tokens);
+        // const [tokens, usdPremium] = calculatePremium(
+        //   strikePriceFloat,
+        //   assetPrice,
+        //   timeToExpityInYears,
+        //   volatility,
+        //   "PUT",
+        //   selectedMarket?.account.assetDecimals ?? 0
+        // );
+        // setEstimatedPremium(usdPremium);
+        // setEstimatedPremiumTokens(tokens);
       }
     } else {
       setEstimatedPremium(0);
     }
-  }, [strikePrice, quantity, expiryDays, optionType, assetPrice, selectedMarket]);
+  }, [strikePrice, quantity, expirySetting, optionType, assetPrice, selectedMarket]);
   
   const formatBN = (bn: BN, decimals = 0) => {
     if (!bn) return "0";
@@ -93,35 +124,36 @@ export default function OptionsBuyingFeature() {
     return (tokenAmount * (assetPrice ?? 0)).toLocaleString();
   };
   
-  const calculateProfitability = () => {
-    if (!selectedMarket) return "0%";
-    const premiums = selectedMarket.account.premiums.toNumber();
-    const totalReserve = selectedMarket.account.reserveSupply.toNumber();
-    if (totalReserve === 0) return "0%";
-    return ((premiums / totalReserve) * 100).toFixed(2) + "%";
-  };
+  // const calculateProfitability = () => {
+  //   if (!selectedMarket) return "0%";
+  //   const premiums = selectedMarket.premiums;
+  //   const totalReserve = selectedMarket.reserveSupply;
+  //   if (totalReserve === 0) return "0%";
+  //   return ((premiums / totalReserve) * 100).toFixed(2) + "%";
+  // };
   
   // Prevents flash of content before redirect
   if (!selectedMarket) {
     return null;
   }
   
+
   const handleBuyOption = async () => {
-    const strikePriceScaled = parseFloat(strikePrice) * Math.pow(10, 6);
+    const strikePriceScaled = parseFloat(strikePrice) * Math.pow(10, 8);
     // const quantityInTokens = parseFloat(quantity) * Math.pow(10, selectedMarket.account.assetDecimals);
     // const slippageDecimal = slippage/100;
     // const maxPremiumCost = estimatedPremium * (1 + slippageDecimal) * Math.pow(10, selectedMarket.account.assetDecimals);
 
-    const nowInSeconds = Math.floor(Date.now() / 1000); // UNIX timestamp in seconds
-    const expiryTimestamp = nowInSeconds + expiryDays * 24 * 60 * 60;
+    // const nowInSeconds = Math.floor(Date.now() / 1000); // UNIX timestamp in seconds
+    // const expiryTimestamp = nowInSeconds + 0 * 24 * 60 * 60;
 
     const buyOptionPayload = {
-        marketIx: selectedMarket.account.id,
+        marketIx: selectedMarket.id,
         option: optionType,
         strikePrice: strikePriceScaled,
-        expiryStamp: expiryTimestamp,
+        expirySetting: expirySetting,
         quantity: quantity,
-        mint: selectedMarket.account.assetMint.toBase58(),
+        mint: selectedMarket.assetMint,
         estPremium: estimatedPremiumTokens
     };
 
@@ -129,15 +161,60 @@ export default function OptionsBuyingFeature() {
     // return;
 
     try {
-        await buyOption.mutateAsync(buyOptionPayload);
+        const signature = await buyOption(selectedMarket.id,
+          optionType,
+          strikePriceScaled,
+          expirySetting,
+          quantity,
+          selectedMarket.assetMint,
+          estimatedPremiumTokens);
+
+          transactionToast(signature)
+
     } catch(err) {
         console.log('Error: ', err);
+        toast.error('Failed')
     }
   };
 
-  const handleExpiryPreset = (days: number) => {
-    setExpiryDays(days);
+  const handleExpiryPreset = (set: number) => {
+    setexpirySetting(set);
   };
+
+  const getVol = (expiry: number) => {
+    switch (expiry) {
+      case 0: 
+        return selectedMarket.hour1VolatilityBps
+      case 1: 
+        return selectedMarket.hour1VolatilityBps
+      case 2: 
+        return selectedMarket.hour1VolatilityBps
+      case 3: 
+        return selectedMarket.hour1VolatilityBps
+      case 4: 
+        return selectedMarket.hour1VolatilityBps
+    default:
+      console.log('def wtf')
+      return 0
+   }
+  } 
+
+  const volToSecs = (expiry: number) => {
+    switch (expiry) {
+      case 0: 
+        return 60 * 60
+      case 1: 
+        return 4 * 60 * 60
+      case 2: 
+        return 24 * 60 * 60
+      case 3: 
+        return 3 * 24 * 60 * 60
+      case 4: 
+        return 7 * 24 * 60 * 60
+    default:
+      return 0
+   }
+  }
   
   return (
     <div className="container mx-auto px-4 py-6 max-w-4xl">
@@ -154,7 +231,7 @@ export default function OptionsBuyingFeature() {
       <div className="bg-white rounded-xl">
         <div className="bg-white px-6 py-4">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-sky-400 bg-clip-text text-transparent">
-            Buy Options on {selectedMarket.account.name}
+            Buy Options on { tokenData.symbol } market
           </h1>
           <p className="text-sm text-gray-600 opacity-80">
             Trade options with customizable strike prices and expiry dates
@@ -171,14 +248,16 @@ export default function OptionsBuyingFeature() {
                   <div>
                     <p className="text-sm text-gray-500">Pool liquidity</p>
                     <p className="text-lg font-medium">
-                      ${formatBN(selectedMarket.account.reserveSupply.add(selectedMarket.account.premiums), 
-                      selectedMarket.account.assetDecimals)}
+                      ${
+                      formatBN(new BN(selectedMarket.reserveSupply).add(new BN(selectedMarket.premiums)), 
+                      selectedMarket.assetDecimals)
+                      }
                     </p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Current Price</p>
                     <div className="flex items-end">
-                        <span className="text-2xl font-bold">${assetPrice ? assetPrice.toFixed(2) : "..."}</span>
+                        <span className="text-2xl font-bold">${assetPrice ? assetPrice.toFixed(4) : "..."}</span>
                         {
                         // priceChange.value !== 0 && 
                         (
@@ -190,19 +269,21 @@ export default function OptionsBuyingFeature() {
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Protocol Fee</p>
-                    <p className="text-lg font-medium">{selectedMarket.account.feeBps / 100}%</p>
+                    <p className="text-lg font-medium">{selectedMarket.feeBps / 100}%</p>
                   </div>
-                  <div>
+                  {/*
+                    <div>
                     <p className="text-sm text-gray-500">Profitability</p>
                     <p className="text-lg font-medium text-green-600">{calculateProfitability()}</p>
                   </div>
+                  */}
                 </div>
               </div>
               
               <div className="py-2">
                 <p className="text-sm text-gray-500 mb-1">Asset</p>
                 <p className="font-mono text-sm p-2 rounded break-all">
-                  {selectedMarket.account.priceFeed}
+                  {selectedMarket.priceFeed}
                 </p>
               </div>
               
@@ -239,12 +320,14 @@ export default function OptionsBuyingFeature() {
                       CALL
                     </button>
                     <button 
-                      className={`py-2 px-4 rounded-lg font-medium transition-colors ${
-                        optionType === "PUT" 
-                          ? "bg-red-600 text-white" 
-                          : "bg-white border border-gray-200 text-gray-700"
-                      }`}
-                      onClick={() => setOptionType("PUT")}
+                      disabled
+                      className={`py-2 px-4 rounded-lg font-medium transition-colors 
+                        ${
+                          optionType === "PUT" 
+                            ? "bg-red-600 text-white" 
+                            : "bg-white border border-red-500 text-red-500"
+                        } 
+                        opacity-50 cursor-not-allowed`}
                     >
                       PUT
                     </button>
@@ -275,41 +358,61 @@ export default function OptionsBuyingFeature() {
                 <div>
                   <label className="block text-sm text-gray-600 mb-2">Expiry</label>
                   <div className="grid grid-cols-3 gap-2 mb-2">
+                  <button 
+                      className={`text-sm py-1 rounded-md transition-colors ${
+                        expirySetting === 0 
+                          ? "bg-blue-600 text-white" 
+                          : "bg-white border border-gray-200 text-gray-700"
+                      }`}
+                      onClick={() => handleExpiryPreset(0)}
+                    >
+                      1 Hour
+                    </button>
                     <button 
-                      className={`text-sm py-1 rounded-lg transition-colors ${
-                        expiryDays === 1 
+                      className={`text-sm py-1 rounded-sm transition-colors ${
+                        expirySetting === 1 
                           ? "bg-blue-600 text-white" 
                           : "bg-white border border-gray-200 text-gray-700"
                       }`}
                       onClick={() => handleExpiryPreset(1)}
                     >
+                      4 Hours
+                    </button>
+                    <button 
+                      className={`text-sm py-1 rounded-lg transition-colors ${
+                        expirySetting === 2 
+                          ? "bg-blue-600 text-white" 
+                          : "bg-white border border-gray-200 text-gray-700"
+                      }`}
+                      onClick={() => handleExpiryPreset(2)}
+                    >
                       1 Day
                     </button>
                     <button 
                       className={`text-sm py-1 rounded-lg transition-colors ${
-                        expiryDays === 7 
+                        expirySetting === 3 
                           ? "bg-blue-600 text-white" 
                           : "bg-white border border-gray-200 text-gray-700"
                       }`}
-                      onClick={() => handleExpiryPreset(7)}
+                      onClick={() => handleExpiryPreset(3)}
                     >
-                      1 Week
+                      3 Days
                     </button>
                     <button 
                       className={`text-sm py-1 rounded-lg transition-colors ${
-                        expiryDays === 30 
+                        expirySetting === 4 
                           ? "bg-blue-600 text-white" 
                           : "bg-white border border-gray-200 text-gray-700"
                       }`}
-                      onClick={() => handleExpiryPreset(30)}
+                      onClick={() => handleExpiryPreset(4)}
                     >
-                      1 Month
+                      1 Week
                     </button>
                   </div>
-                  <div className="relative rounded-lg border border-gray-200 bg-white">
+                  {/* <div className="relative rounded-lg border border-gray-200 bg-white">
                     <input 
                       type="number" 
-                      value={expiryDays}
+                      value={expirySetting}
                       onChange={(e) => {
                         let days = parseInt(e.target.value);
                         if (days > 31) {
@@ -325,7 +428,7 @@ export default function OptionsBuyingFeature() {
                     <div className="absolute right-3 top-3 bg-gray-100 px-2 py-1 rounded text-sm">
                       Days
                     </div>
-                  </div>
+                  </div> */}
                 </div>
                 
                 {/* Quantity */}
@@ -339,9 +442,6 @@ export default function OptionsBuyingFeature() {
                       className="w-full p-3 outline-none" 
                       placeholder="0.00"
                     />
-                    <div className="absolute right-3 top-3 bg-gray-100 px-2 py-1 rounded text-sm">
-                      {selectedMarket.account.name}
-                    </div>
                   </div>
                 </div>
                 
@@ -384,7 +484,7 @@ export default function OptionsBuyingFeature() {
                   <div className="flex justify-between text-sm">
                     <span className="text-blue-800">Estimated Premium:</span>
                     <span className="font-medium text-blue-900">
-                      ${(estimatedPremium * quantity).toFixed(2)}
+                      ${(estimatedPremium).toFixed(2)}
                     </span>
                   </div>
                 </div>

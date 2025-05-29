@@ -1,6 +1,7 @@
 import { BN, ProgramAccount } from '@coral-xyz/anchor';
 import { PublicKey } from '@solana/web3.js';
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import { getTokenMetadata, getTokenPrice } from './token-manager';
 
 // Define the market interface
 // export interface Market {
@@ -11,9 +12,11 @@ import { createContext, useContext, useState, ReactNode, useEffect } from 'react
 //   price: number;
 // }
 
-export type PriceFeed = {
+export type TokenInfo = {
   mint: string;
-  price: number
+  price: number,
+  logoUrl: string,
+  symbol: string
   // lastUpdated: number;
 };
 
@@ -26,10 +29,15 @@ type MarketAccount = {
   committedReserve: BN;
   premiums: BN;
   lpMinted: BN;
-  volatilityBps: number;
   priceFeed: string;
   assetDecimals: number;
   assetMint: PublicKey;
+  hour1VolatilityBps: number;
+  hour4VolatilityBps: number;
+  day1VolatilityBps: number;
+  day3VolatilityBps: number;
+  weekVolatilityBps: number;
+  volLastUpdated: number;
 };
 
 interface MarketContextType {
@@ -37,11 +45,9 @@ interface MarketContextType {
   setSelectedMarket: (market: ProgramAccount<MarketAccount> | null) => void;
   allMarkets: ProgramAccount<any>[]; // All markets
   setMarkets: (markets: ProgramAccount<any>[] | []) => void;
-  prices: PriceFeed[]; // All markets
-  setPrices: (prices: PriceFeed[] | []) => void;
-  // priceFeeds: Record<string, PriceFeed>;
-  // refreshPriceFeed: (mintAddress: string) => Promise<void>;
-  // getPrice: (mintAddress: string) => number | undefined;
+  tokenData: Record<string, TokenInfo>;
+  // refreshTokenData: () => void;
+  // setTokenInfo: (prices: TokenInfo[] | []) => void;
 
 }
 
@@ -50,11 +56,9 @@ const MarketContext = createContext<MarketContextType>({
   setSelectedMarket: () => {},
   allMarkets: [],
   setMarkets: () => [],
-  prices: [],
-  setPrices: () => [],
-  // priceFeeds: {},
-  // refreshPriceFeed: async () => {},
-  // getPrice: () => undefined
+  tokenData: {},
+  // refreshTokenData: () => {},
+  // setTokenInfo: () => [],
 });
 
 interface MarketProviderProps {
@@ -64,15 +68,53 @@ interface MarketProviderProps {
 export function MarketProvider({ children }: MarketProviderProps) {
   const [selectedMarket, setSelectedMarket] = useState<ProgramAccount<MarketAccount> | null>(null);
   const [allMarkets, setMarkets] = useState<ProgramAccount<MarketAccount>[]>([]);
-  const [prices, setPrices] = useState<PriceFeed[]>([]);
-  // const [priceFeeds, setPriceFeeds] = useState<Record<string, PriceFeed>>({});
+  const [tokenData, setTokenData] = useState<Record<string, TokenInfo>>({});
   
-  // useEffect(() => {
+//   const fetchTokenData = async () => {
+//     console.log('fetching token data...');
+//     if (!allMarkets || allMarkets.length === 0) {
+//       console.log('returning...');
+//       return;
+//     }
 
-  // })
+//     const mints = allMarkets.map((m) => m.account.assetMint.toBase58());
+//     const updatedData: Record<string, TokenInfo> = {};
+
+//     await Promise.all(
+//       mints.map(async (mint) => {
+//         const [price, metadata] = await Promise.all([
+//           getTokenPrice(mint),
+//           getTokenMetadata(mint),
+//         ]);
+//         updatedData[mint] = {
+//           mint,
+//           price,
+//           logoUrl: metadata?.logoURI || '',
+//           symbol: metadata?.symbol || 'N/A',
+//         };
+//       })
+//     );
+
+//     console.log('updatedData: ', updatedData);
+
+//     // Only update state if data has changed
+//     if (JSON.stringify(updatedData) !== JSON.stringify(tokenData)) {
+//       setTokenData(updatedData);
+//     }
+//   };
+
+//   useEffect(() => {
+//     if (allMarkets.length === 0) return;
+
+//     fetchTokenData();
+//     const interval = setInterval(fetchTokenData, 3000); // Update every 2 seconds
+//     return () => clearInterval(interval);
+//   }
+//   , [allMarkets]
+// );
 
   return (
-    <MarketContext.Provider value={{ selectedMarket, setSelectedMarket, allMarkets, setMarkets, prices, setPrices }}>
+    <MarketContext.Provider value={{ selectedMarket, setSelectedMarket, allMarkets, setMarkets, tokenData }}>
       {children}
     </MarketContext.Provider>
   );

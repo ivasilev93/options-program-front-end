@@ -870,6 +870,142 @@ export type OptionsProgram = {
           }
         }
       ]
+    },
+    {
+      "name": "updateMarketVol",
+      "discriminator": [
+        196,
+        210,
+        98,
+        172,
+        255,
+        112,
+        230,
+        144
+      ],
+      "accounts": [
+        {
+          "name": "signer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "market",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  97,
+                  114,
+                  107,
+                  101,
+                  116
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "params.ix"
+              }
+            ]
+          }
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "updateMarketVolParams"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "withdrawFees",
+      "discriminator": [
+        198,
+        212,
+        171,
+        109,
+        144,
+        215,
+        174,
+        89
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "adminTokenAcc",
+          "writable": true
+        },
+        {
+          "name": "assetMint"
+        },
+        {
+          "name": "protocolFeesVault",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  116,
+                  111,
+                  99,
+                  111,
+                  108,
+                  95,
+                  102,
+                  101,
+                  101,
+                  115,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "params.ix"
+              }
+            ]
+          }
+        },
+        {
+          "name": "tokenProgram"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "withdrawFeesParams"
+            }
+          }
+        }
+      ]
     }
   ],
   "accounts": [
@@ -985,63 +1121,93 @@ export type OptionsProgram = {
     },
     {
       "code": 6003,
+      "name": "invalidQuantity",
+      "msg": "invalidQuantity"
+    },
+    {
+      "code": 6004,
       "name": "dustAmount",
       "msg": "dustAmount"
     },
     {
-      "code": 6004,
+      "code": 6005,
       "name": "overflow",
       "msg": "overflow"
     },
     {
-      "code": 6005,
+      "code": 6006,
       "name": "underflow",
       "msg": "underflow"
     },
     {
-      "code": 6006,
+      "code": 6007,
       "name": "ordersLimitExceeded",
       "msg": "ordersLimitExceeded"
     },
     {
-      "code": 6007,
+      "code": 6008,
       "name": "invalidExpiry",
       "msg": "invalidExpiry"
     },
     {
-      "code": 6008,
+      "code": 6009,
       "name": "insufficientColateral",
       "msg": "insufficientColateral"
     },
     {
-      "code": 6009,
+      "code": 6010,
       "name": "invalidPriceFeed",
       "msg": "invalidPriceFeed"
     },
     {
-      "code": 6010,
+      "code": 6011,
       "name": "exerciseIsOverdue",
       "msg": "exerciseIsOverdue"
     },
     {
-      "code": 6011,
+      "code": 6012,
+      "name": "exerciseTooEarly",
+      "msg": "exerciseTooEarly"
+    },
+    {
+      "code": 6013,
       "name": "insufficientShares",
       "msg": "insufficientShares"
     },
     {
-      "code": 6012,
+      "code": 6014,
       "name": "invalidState",
       "msg": "invalidState"
     },
     {
-      "code": 6013,
+      "code": 6015,
       "name": "premiumCalcError",
       "msg": "premiumCalcError"
     },
     {
-      "code": 6014,
+      "code": 6016,
       "name": "invalidPrices",
       "msg": "invalidPrices"
+    },
+    {
+      "code": 6017,
+      "name": "cannotWithdraw",
+      "msg": "Cannot withdraw. Funds are collateral to active options"
+    },
+    {
+      "code": 6018,
+      "name": "notImplemented",
+      "msg": "notImplemented"
+    },
+    {
+      "code": 6019,
+      "name": "invalidStrikePrice",
+      "msg": "invalidStrikePrice"
+    },
+    {
+      "code": 6020,
+      "name": "invalidVolatility",
+      "msg": "invalidVolatility"
     }
   ],
   "types": [
@@ -1067,8 +1233,12 @@ export type OptionsProgram = {
             "type": "u64"
           },
           {
-            "name": "expiryStamp",
-            "type": "i64"
+            "name": "expirySetting",
+            "type": {
+              "defined": {
+                "name": "expiry"
+              }
+            }
           },
           {
             "name": "quantity",
@@ -1099,7 +1269,23 @@ export type OptionsProgram = {
             "type": "string"
           },
           {
-            "name": "volatilityBps",
+            "name": "hour1VolatilityBps",
+            "type": "u32"
+          },
+          {
+            "name": "hour4VolatilityBps",
+            "type": "u32"
+          },
+          {
+            "name": "day1VolatilityBps",
+            "type": "u32"
+          },
+          {
+            "name": "day3VolatilityBps",
+            "type": "u32"
+          },
+          {
+            "name": "weekVolatilityBps",
             "type": "u32"
           }
         ]
@@ -1137,6 +1323,29 @@ export type OptionsProgram = {
           {
             "name": "optionId",
             "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "expiry",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "hour1"
+          },
+          {
+            "name": "hour4"
+          },
+          {
+            "name": "day1"
+          },
+          {
+            "name": "day3"
+          },
+          {
+            "name": "week"
           }
         ]
       }
@@ -1275,16 +1484,36 @@ export type OptionsProgram = {
             "type": "u64"
           },
           {
-            "name": "volatilityBps",
-            "type": "u32"
-          },
-          {
             "name": "priceFeed",
             "type": "string"
           },
           {
             "name": "assetDecimals",
             "type": "u8"
+          },
+          {
+            "name": "hour1VolatilityBps",
+            "type": "u32"
+          },
+          {
+            "name": "hour4VolatilityBps",
+            "type": "u32"
+          },
+          {
+            "name": "day1VolatilityBps",
+            "type": "u32"
+          },
+          {
+            "name": "day3VolatilityBps",
+            "type": "u32"
+          },
+          {
+            "name": "weekVolatilityBps",
+            "type": "u32"
+          },
+          {
+            "name": "volLastUpdated",
+            "type": "i64"
           }
         ]
       }
@@ -1400,6 +1629,10 @@ export type OptionsProgram = {
           },
           {
             "name": "premium",
+            "type": "u64"
+          },
+          {
+            "name": "premiumInUsd",
             "type": "u64"
           },
           {
@@ -1561,6 +1794,38 @@ export type OptionsProgram = {
       }
     },
     {
+      "name": "updateMarketVolParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "ix",
+            "type": "u16"
+          },
+          {
+            "name": "hour1VolatilityBps",
+            "type": "u32"
+          },
+          {
+            "name": "hour4VolatilityBps",
+            "type": "u32"
+          },
+          {
+            "name": "day1VolatilityBps",
+            "type": "u32"
+          },
+          {
+            "name": "day3VolatilityBps",
+            "type": "u32"
+          },
+          {
+            "name": "weekVolatilityBps",
+            "type": "u32"
+          }
+        ]
+      }
+    },
+    {
       "name": "userAccount",
       "serialization": "bytemuck",
       "repr": {
@@ -1614,6 +1879,18 @@ export type OptionsProgram = {
           },
           {
             "name": "full"
+          }
+        ]
+      }
+    },
+    {
+      "name": "withdrawFeesParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "ix",
+            "type": "u16"
           }
         ]
       }

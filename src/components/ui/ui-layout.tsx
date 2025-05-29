@@ -233,6 +233,9 @@ export function useTransactionToast() {
         <div className="text-lg">Transaction sent</div>
         <ExplorerLink path={`tx/${signature}`} label={'View Transaction'} className="btn btn-xs btn-primary" />
       </div>,
+      {
+        duration: 4000
+      }
     )
   }
 }
