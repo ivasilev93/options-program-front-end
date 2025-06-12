@@ -14,7 +14,7 @@ export function estimateWithdrawAmount(
     const scale = 1_000_000_000;
 
     // Calculate ownership ratio (using BigInt to prevent precision loss)
-    const ownershipRatio = (BigInt(lpTokensToBurn) * BigInt(scale)) / BigInt(lpMinted);
+    const ownershipRatio = lpMinted == 0 ? BigInt(1) : (BigInt(lpTokensToBurn) * BigInt(scale)) / BigInt(lpMinted);
     console.log('lpTokensToBurn', lpTokensToBurn) 
     console.log('lpMinted', lpMinted) 
     console.log('ownershipRatio', ownershipRatio) 

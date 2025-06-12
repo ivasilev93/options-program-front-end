@@ -5,7 +5,7 @@
  * IDL can be found at `target/idl/options_program.json`.
  */
 export type OptionsProgram = {
-  "address": "Be2AgTUf5uVfdHaSXPpzifVkmwfkgRwtLToVywevfvrS",
+  "address": "3ZWb72v75w19dvHjwsqxe6gdK3yvU6p645PPEFpCSzHg",
   "metadata": {
     "name": "optionsProgram",
     "version": "0.1.0",

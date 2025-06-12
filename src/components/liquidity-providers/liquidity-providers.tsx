@@ -2,7 +2,6 @@ import { useEffect, useState } from "react"
 import { useNavigate, useLocation } from "react-router";
 // import { useMarket } from "@/app/common/market-context";
 import { IoIosArrowBack } from "react-icons/io";
-import { optionsProgram } from './liquidity-providers-data-access'
 // import { getTokenPrice } from "@/app/common/token-manager";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { DepositForm, WithdrawForm } from "./luquidity-providers-ui";
@@ -12,67 +11,68 @@ import { MarketAccount, rpcCalls } from "@/app/common/web3";
 export default function LiquidityProvidersFeature() {
   const navigate = useNavigate();
   const { publicKey } = useWallet();
-  const { getUserLpTokenBalance } = rpcCalls();
+  const { getUserLpTokenBalance, fetchMarket } = rpcCalls();
   // const { selectedMarket, tokenData } = useMarket();
   const [userLpTokens, setUserLpTokens] = useState<any>({});
   // const [assetPrice, setAssetPrice] = useState(0);
   const [actionType, setActionType] = useState("DEPOSIT");
   // const [priceChange, setPriceChange] = useState({ value: 0, isPositive: true });
   const location = useLocation();
-  const selectedMarket = location.state?.selectedMarket as MarketAccount;
-  const tokenData = location.state?.tokenData;
-
-  // if (selectedMarket) {
-  //   selectedMarket.account.reserveSupply = new BN(selectedMarket.account.reserveSupply);
-  //   selectedMarket.account.committedReserve = new BN(selectedMarket.account.committedReserve);
-  //   selectedMarket.account.premiums = new BN(selectedMarket.account.premiums);
-  //   selectedMarket.account.lpMinted = new BN(selectedMarket.account.lpMinted);
-  // }
-
-  console.log('LIQ PROV SELECTED MARKET', selectedMarket)
-  
-  // useEffect(() => {
-  //   if (selectedMarket) {
-  //       const fetchPrice = async () => {
-  //           // Choose one of the methods above based on your oracle source
-  //           const price = await getTokenPrice(selectedMarket.account.assetMint.toBase58());
-  //           if (assetPrice && price) {
-  //             const change = price - assetPrice;
-  //             setPriceChange({ value: change, isPositive: change >= 0 });
-  //           }
-  //           setAssetPrice(Number(price));
-  //         };
-          
-  //         fetchPrice();
-  //         const interval = setInterval(fetchPrice, 5000); // every 5 seconds          
-  //         return () => clearInterval(interval);
-  //   } else {
-  //       navigate('/');
-  //   }
-  // }, [selectedMarket, navigate]);
-
-  //  useEffect(() => {
-  //   if (selectedMarket) {
-
-  //     const price = tokenData.price;
-  //     setAssetPrice(price);
-  //   } else {
-  //       navigate('/');
-  //   }
-  // }, [selectedMarket, tokenData]);
+  // let selectedMarket = location.state?.selectedMarket as MarketAccount;
+  const [selectedMarket, setSelectedMarket] = useState<MarketAccount | null>(location.state?.selectedMarket ?? null);
+  const tokenData = location.state?.tokenData;  
 
   //Fetch user LPtokens
-  useEffect(() => {   
-
-    fetchUserLpBalance();
-  }, [selectedMarket, publicKey])
-
+  // useEffect(() => {  
+  //   fetchUserLpBalance();
+  // }, [selectedMarket, publicKey])
+  useEffect(() => {
+    const refreshData = async () => {
+      if (!selectedMarket?.id || !publicKey) return;
+  
+      try {
+        // Fetch fresh market data
+        const updatedMarket = await fetchMarket(selectedMarket.id);
+        if (updatedMarket) {
+          setSelectedMarket(updatedMarket);
+        }
+  
+        // Fetch LP token balance
+        const tokenBalance = await getUserLpTokenBalance(selectedMarket.id, publicKey.toBase58());
+        setUserLpTokens(tokenBalance);
+      } catch (err) {
+        console.error("Failed to refresh market data:", err);
+      }
+    };
+  
+    refreshData();
+  }, [selectedMarket?.id, publicKey]);
   
   const formatBNtoUsd = (bn: any, decimals = 0) => {
     if (!bn) return "0";
     const tokenAmount = bn / Math.pow(10, decimals);
     return (tokenAmount * (tokenData.price ?? 0)).toLocaleString();
   };
+
+  const refreshOnAction = async () => {
+    if (!selectedMarket?.id) return;
+
+    const updatedMarket = await fetchMarket(selectedMarket.id);
+    if (updatedMarket) {
+      setSelectedMarket(updatedMarket);
+    }
+
+    if (publicKey) {
+      const tokenBalance = await getUserLpTokenBalance(selectedMarket.id, publicKey.toBase58());
+      setUserLpTokens(tokenBalance);  
+    }
+  }
+
+  // const refreshMarket = async () => {
+  //   if (!selectedMarket?.id) return;
+
+  //   await fetchMarket(selectedMarket.id);
+  // }
 
   const fetchUserLpBalance = async () => {
     console.log('eee')
@@ -140,13 +140,13 @@ export default function LiquidityProvidersFeature() {
               {/* <div className="rounded-lg bg-gray-50 p-4"> */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-gray-500">Reserve ($USD)</p>
+                    <p className="text-sm text-gray-500">TVL ($USD)</p>
                     <p className="text-lg font-medium">
                       ${formatBNtoUsd(selectedMarket.reserveSupply, selectedMarket.assetDecimals)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">Reserve (tokens)</p>
+                    <p className="text-sm text-gray-500">TVL (tokens)</p>
                     <p className="text-lg font-medium">{formatToTokenCount(selectedMarket.reserveSupply, selectedMarket.assetDecimals)}</p>
                   </div>
                   <div>
@@ -169,10 +169,10 @@ export default function LiquidityProvidersFeature() {
                     <p className="text-sm text-gray-500">Premiums (tokens)</p>
                     <p className="text-lg font-medium">{formatToTokenCount(selectedMarket.premiums, selectedMarket.assetDecimals)}</p>
                   </div>
-                  <div>
+                  {/* <div>
                     <p className="text-sm text-gray-500">Profitability</p>
                     <p className="text-lg font-medium text-green-600">{calculateProfitability()}</p>
-                  </div>
+                  </div> */}
                   <div>
                     <p className="text-sm text-gray-500">Protocol Fee</p>
                     <p className="text-lg font-medium">{selectedMarket.feeBps / 100}%</p>
@@ -193,6 +193,10 @@ export default function LiquidityProvidersFeature() {
                           </span>
                         )} */}
                       </div>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">LP minted</p>
+                    <p className="text-lg font-medium">{(selectedMarket.lpMinted / Math.pow(10, selectedMarket.assetDecimals ?? 0)).toFixed(6)}</p>
                   </div>
                 </div>
               </div>
@@ -254,9 +258,10 @@ export default function LiquidityProvidersFeature() {
                 </div>
               
               { actionType === "DEPOSIT" ?
-                <DepositForm assetPrice={tokenData.price} onDeposit={fetchUserLpBalance} selectedMarket={selectedMarket}/>
+                <DepositForm assetPrice={tokenData.price} onDeposit={refreshOnAction} selectedMarket={selectedMarket} symbol={tokenData.symbol}/>
                 :
-                <WithdrawForm assetPrice={tokenData.price} selectedMarket={selectedMarket}/>
+                <WithdrawForm assetPrice={tokenData.price} selectedMarket={selectedMarket} symbol={tokenData.symbol}
+                onWithdraw={refreshOnAction}/>
               }             
             </div>
           </div>

@@ -19,7 +19,7 @@ export function getOptionsProgramId(cluster: Cluster) {
     case 'devnet':
     case 'testnet':
       // This is the program ID for the Options program on devnet and testnet.
-      return new PublicKey('Be2AgTUf5uVfdHaSXPpzifVkmwfkgRwtLToVywevfvrS')
+      return new PublicKey('3ZWb72v75w19dvHjwsqxe6gdK3yvU6p645PPEFpCSzHg')
     case 'mainnet-beta':
     default:
       return OPTIONS_PROGRAM_ID

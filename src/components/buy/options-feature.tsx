@@ -271,6 +271,26 @@ export default function OptionsBuyingFeature() {
                     <p className="text-sm text-gray-500">Protocol Fee</p>
                     <p className="text-lg font-medium">{selectedMarket.feeBps / 100}%</p>
                   </div>
+                  <div>
+                    <p className="text-sm text-gray-500">1 Hr Historic Vol</p>
+                    <p className="text-lg font-medium">{selectedMarket.hour1VolatilityBps / 100}%</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">4 Hr Historic Vol</p>
+                    <p className="text-lg font-medium">{selectedMarket.hour4VolatilityBps / 100}%</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">1 Day Historic Vol</p>
+                    <p className="text-lg font-medium">{selectedMarket.day1VolatilityBps / 100}%</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">3 Day Historic Vol</p>
+                    <p className="text-lg font-medium">{selectedMarket.day3VolatilityBps / 100}%</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">1 Week Historic Vol</p>
+                    <p className="text-lg font-medium">{selectedMarket.weekVolatilityBps / 100}%</p>
+                  </div>
                   {/*
                     <div>
                     <p className="text-sm text-gray-500">Profitability</p>

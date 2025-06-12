@@ -79,7 +79,7 @@ export async function getTokenPrice(assetMint: string) {
     // return 1;
 
     //Local JUP mock token => set real addrr to get real values
-    if (assetMint == '6urJ1afyysZPBiJwcmcpsF1c47uAoLons8ZcxYv3UNUs') {
+    if (assetMint == 'ErjmrUm9NjtQJPhSWSon4b8NDfMhrmih8H511ZW7frsJ') {
       assetMint = 'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN'
     }
 
@@ -102,7 +102,7 @@ export async function getTokenMetadata(assetMint: string): Promise<{ symbol: str
   // };
 
    //Local JUP mock token => set real addrr to get real values
-   if (assetMint == '6urJ1afyysZPBiJwcmcpsF1c47uAoLons8ZcxYv3UNUs') {
+   if (assetMint == 'ErjmrUm9NjtQJPhSWSon4b8NDfMhrmih8H511ZW7frsJ') {
     assetMint = 'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN'
   }
   try {

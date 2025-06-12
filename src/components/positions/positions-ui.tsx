@@ -114,8 +114,7 @@ export function PositionsList({ account }: { account: PublicKey }) {
                   <th className="text-base px-4 py-3 text-right">Expiry</th>
                   <th className="text-base px-4 py-3 text-right">Strike price</th>
                   <th className="text-base px-4 py-3 text-right">Quantity</th>
-                  <th className="text-base px-4 py-3 text-right">Premium (tokens)</th>
-                  <th className="text-base px-4 py-3 text-right">Total Premium (USD)</th>
+                  <th className="text-base px-4 py-3 text-right">Premium USD(tokens)</th>
                 </tr>
               </thead>
               <tbody>
@@ -140,8 +139,8 @@ export function PositionsList({ account }: { account: PublicKey }) {
                       <td className="px-4 py-3 text-right">{formatSolanaTimestamp(o.expiry)}</td>
                       <td className="px-4 py-3 text-right">${descaleUsdPrice(o.strikePrice)}</td>
                       <td className="px-4 py-3 text-right">{o.quantity.toNumber()}</td>
-                      <td className="px-4 py-3 text-right">{o.premium.toNumber()}</td>
-                      <td className="px-4 py-3 text-right">${descaleUsdPrice(o.premiumInUsd)}</td>       
+                      <td className="px-4 py-3 text-right">${descaleUsdPrice(o.premiumInUsd)} ({o.premium.toNumber()})</td>
+                      {/* <td className="px-4 py-3 text-right">${descaleUsdPrice(o.premiumInUsd)}</td>        */}
                       <td><button 
                         className="bg-transparent font-semibold py-2 px-4 border border-blue-900 text-blue-900 hover:shadow-md hover:text-blue-700 rounded-md"
                         onClick={() => onExercise(o.marketIx, o.ix, markets[o.marketIx])} 
@@ -153,10 +152,11 @@ export function PositionsList({ account }: { account: PublicKey }) {
             </table>
           </div>
           ) : (
-            <div className="text-center py-12">
-              <h2 className="text-2xl mb-2">No Markets</h2>
-              <p className="text-base-content/70">No markets found. Create one above to get started.</p>
-            </div>
+            <div></div>
+            // <div className="text-center py-12">
+            //   <h2 className="text-2xl mb-2">No Markets</h2>
+            //   <p className="text-base-content/70">No markets found. Create one above to get started.</p>
+            // </div>
           )}
           </div>
           </div>

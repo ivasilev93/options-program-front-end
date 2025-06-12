@@ -3,11 +3,15 @@ import { useAnchorProvider } from "@/components/solana/solana-provider"
 import { useTransactionToast } from "@/components/ui/ui-layout"
 import { getOptionsProgram, getOptionsProgramId } from "@/contract/options-program-exports"
 import { useMemo } from "react"
-import { Cluster, PublicKey, SystemProgram, Transaction } from "@solana/web3.js"
+import { Cluster, ComputeBudgetProgram, PublicKey, SystemProgram, Transaction } from "@solana/web3.js"
 import { useCluster } from "@/components/cluster/cluster-data-access"
 import { BN, ProgramAccount } from "@coral-xyz/anchor"
 import { ASSOCIATED_TOKEN_PROGRAM_ID, getAssociatedTokenAddress, NATIVE_MINT } from "@solana/spl-token"
 import { checkUserTokenAmount, detectTokenProgram, syncNativeTokenAmounts } from "./token-manager"
+
+export const CUSTOM_ERROR_MESSAGES = {
+  6009: 'Insufficient collateral in market to complete the transaction.',
+};
 
 export type MarketAccount = {
     id: number;
@@ -38,8 +42,43 @@ export function rpcCalls() {
     const program = useMemo(() => getOptionsProgram(provider, programId), [provider, programId])
     const connection = provider.connection;
 
+    const addPriorityFee = ComputeBudgetProgram.setComputeUnitPrice({
+      microLamports: 5
+    });
+
     async function fetchMarkets(): Promise<ProgramAccount[]> {
         return program.account.market.all()
+    }
+
+    async function fetchMarket(marketIx: number): Promise<MarketAccount | null> {
+      const [marketPDA] = PublicKey.findProgramAddressSync(
+        [
+          Buffer.from("market"),
+          Buffer.from(new Uint8Array(new Uint16Array([marketIx]).buffer))
+        ],
+        program.programId
+      );
+
+      const market = await program.account.market.fetch(marketPDA);
+      console.log('fetched market', market);
+      return {
+        id: market.id,
+        name: market.name,
+        feeBps: market.feeBps.toNumber(),
+        reserveSupply: market.reserveSupply.toNumber(),
+        committedReserve: market.committedReserve.toNumber(),
+        premiums: market.premiums.toNumber(),
+        lpMinted: market.lpMinted.toNumber(),
+        priceFeed: market.priceFeed,
+        assetDecimals: market.assetDecimals,
+        assetMint: market.assetMint.toBase58(),
+        hour1VolatilityBps: market.hour1VolatilityBps,
+        hour4VolatilityBps: market.hour4VolatilityBps,
+        day1VolatilityBps: market.day1VolatilityBps,
+        day3VolatilityBps: market.day3VolatilityBps,
+        weekVolatilityBps: market.weekVolatilityBps,
+        volLastUpdated: market.volLastUpdated,
+      }
     }
 
     async function getProgramAccount(): Promise<any> {
@@ -57,8 +96,6 @@ export function rpcCalls() {
 
       const token_program_id = await detectTokenProgram(connection, mintAddr);
       const user_asset_ata: PublicKey = await getAssociatedTokenAddress(mintAddr, signer, false, token_program_id);
-      console.log('aaaa', user_asset_ata.toBase58())
-      console.log('2222', await connection.getTokenAccountBalance(user_asset_ata));
       let transaction = new Transaction();            
 
       const tokenDiff = await checkUserTokenAmount(mintAddr, signer, connection, amount, token_program_id);
@@ -72,31 +109,8 @@ export function rpcCalls() {
         }   
       }           
 
-      const [market, marketVault, _, lpMint] = getMarketAssociatedPdas(ix);
-      // const [lpMint] = PublicKey.findProgramAddressSync(
-      //   [
-      //     Buffer.from("market_lp_mint"),
-      //     Buffer.from(new Uint8Array(new Uint16Array([ix]).buffer))
-      //   ],
-      //   program.programId
-      // );
-
-      // const [market] = PublicKey.findProgramAddressSync(
-      //       [
-      //         Buffer.from("market"),
-      //         Buffer.from(new Uint8Array(new Uint16Array([ix]).buffer))
-      //       ],
-      //       program.programId
-      //     );
-          
-      //     const [marketVault] = PublicKey.findProgramAddressSync(
-      //       [
-      //         Buffer.from("market_vault"),
-      //         Buffer.from(new Uint8Array(new Uint16Array([ix]).buffer))
-      //       ],
-      //       program.programId
-      //     );
-     const user_lp_ata: PublicKey = await getAssociatedTokenAddress(lpMint, signer, false, token_program_id);
+    const [market, marketVault, _, lpMint] = getMarketAssociatedPdas(ix);
+    const user_lp_ata: PublicKey = await getAssociatedTokenAddress(lpMint, signer, false, token_program_id);
         
     const payload = {
       amount: new BN(amount.toFixed(0)),
@@ -119,7 +133,9 @@ export function rpcCalls() {
       tokenProgram:token_program_id
     }).instruction();
 
-    transaction.add(depositIx); 
+    transaction
+    .add(addPriorityFee)
+    .add(depositIx); 
     const createSignature = await provider.sendAndConfirm(transaction);        
 
     return createSignature;
@@ -152,7 +168,7 @@ export function rpcCalls() {
                 minAmountOut: min_amount_out,
                 ix: ix});
   
-  const withdrawSign = await program.methods.marketWithdraw({
+  const withdrawIx = await program.methods.marketWithdraw({
     lpTokensToBurn: new BN(lp_tokens_to_burn),
     minAmountOut: new BN(min_amount_out),
     ix: ix}
@@ -167,7 +183,14 @@ export function rpcCalls() {
     associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
     systemProgram: SystemProgram.programId,
     tokenProgram:token_program_id
-  }).rpc();   
+  }).instruction();   
+
+  let transaction = new Transaction();            
+  transaction
+  .add(addPriorityFee)
+  .add(withdrawIx);
+
+  const withdrawSign = await provider.sendAndConfirm(transaction);  
   
   return withdrawSign;
 }
@@ -217,28 +240,6 @@ async function buyOption(marketIx: number,
 
     const [market, marketVault, protocolFeesVault, ] = getMarketAssociatedPdas(marketIx);
 
-    // const [market] = PublicKey.findProgramAddressSync(
-    //     [
-    //       Buffer.from("market"),
-    //       Buffer.from(new Uint8Array(new Uint16Array([marketIx]).buffer))
-    //     ],
-    //     program.programId
-    //   );
-      
-    // const [marketVault] = PublicKey.findProgramAddressSync(
-    //     [
-    //       Buffer.from("market_vault"),
-    //       Buffer.from(new Uint8Array(new Uint16Array([marketIx]).buffer))
-    //     ],
-    //     program.programId
-    //   );
-    // const [protocolFeesVault] = PublicKey.findProgramAddressSync(
-    //     [
-    //       Buffer.from("protocol_fees_vault"),
-    //       Buffer.from(new Uint8Array(new Uint16Array([marketIx]).buffer))
-    //     ],
-    //     program.programId
-    // );
     const payload = {
         marketIx: marketIx,
         option: option === "CALL" ? { call: {} } : { put: {} },
@@ -256,7 +257,8 @@ async function buyOption(marketIx: number,
             quantity: quantity
         }
     )
-          //Add create acc ix if there is no user acc created
+
+    //Add create acc ix if there is no user acc created
     const actualUserAcc = await program.account.userAccount.getAccountInfo(userAcc);
     if (!actualUserAcc) {
       transaction.add(
@@ -283,7 +285,10 @@ async function buyOption(marketIx: number,
         tokenProgram:token_program_id
       }).instruction();
       
-      transaction.add(depositIx); 
+      transaction
+      .add(addPriorityFee)
+      .add(depositIx); 
+
       const depositSignature = await provider.sendAndConfirm(transaction);        
       return depositSignature;
   }
@@ -306,7 +311,7 @@ async function buyOption(marketIx: number,
       program.programId
     );      
 
-    const exerciseSign = await program.methods
+    const exerciseIx = await program.methods
       .exercise({
         marketIx: marketIx, 
         optionId: optionIx
@@ -320,8 +325,14 @@ async function buyOption(marketIx: number,
         assetMint: mint,
         priceUpdate: solUsdPythAddr,
         tokenProgram:token_program_id
-      }).rpc();   
-    
+      }).instruction();   
+
+    let transaction = new Transaction();            
+    transaction
+    .add(addPriorityFee)
+    .add(exerciseIx);
+
+    const exerciseSign = await provider.sendAndConfirm(transaction); 
     return exerciseSign;
   }
 
@@ -374,7 +385,8 @@ async function buyOption(marketIx: number,
         withdrawMarket,
         buyOption,
         getUserAccount,
-        exercise
+        exercise,
+        fetchMarket
     }
 
     function expiryToEnum(expiry: number) {

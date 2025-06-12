@@ -139,7 +139,7 @@ function parseMarket(market: ProgramAccount): MarketAccount {
                   <th className="text-base px-4 py-3 text-right">ID</th>
                   <th className="text-base px-4 py-3 text-right">Fee</th>
                   {/* <th className="text-base px-4 py-3 text-right">Volatility</th> */}
-                  <th className="text-base px-4 py-3 text-right">Reserve Supply</th>
+                  <th className="text-base px-4 py-3 text-right">TVL</th>
                   <th className="text-base px-4 py-3 text-right">Committed</th>
                   <th className="text-base px-4 py-3 text-right">Premiums</th>
                   <th className="text-base px-4 py-3 text-right">LP Tokens</th>
@@ -165,10 +165,10 @@ function parseMarket(market: ProgramAccount): MarketAccount {
                       <td className="px-4 py-3 text-right">{m.account.id}</td>
                       <td className="px-4 py-3 text-right">{bpsToPercent(m.account.feeBps)}</td>
                       {/* <td className="px-4 py-3 text-right">{bpsToPercent(m.account.volatilityBps)}</td> */}
-                      <td className="px-4 py-3 text-right">${tokensToMoney(m.account.reserveSupply.toString(), m.account.assetDecimals, tokenData[m.account.assetMint.toBase58()].price, 0)}</td>
+                      <td className="px-4 py-3 text-right">${tokensToMoney(m.account.reserveSupply.toString(), m.account.assetDecimals, tokenData[m.account.assetMint.toBase58()].price, 2)}</td>
                       {/* <td className="px-4 py-3 text-right">{formatTokenAmount(m.account.reserveSupply, m.account.assetDecimals)}</td> */}
-                      <td className="px-4 py-3 text-right">{formatTokenAmount(m.account.committedReserve, m.account.assetDecimals)}</td>
-                      <td className="px-4 py-3 text-right">${tokensToMoney(m.account.premiums, m.account.assetDecimals, tokenData[m.account.assetMint.toBase58()].price, 0)}</td>
+                      <td className="px-4 py-3 text-right">${tokensToMoney(m.account.committedReserve.toString(), m.account.assetDecimals, tokenData[m.account.assetMint.toBase58()].price, 2)}</td>
+                      <td className="px-4 py-3 text-right">${tokensToMoney(m.account.premiums, m.account.assetDecimals, tokenData[m.account.assetMint.toBase58()].price, 2)}</td>
                       {/* <td className="px-4 py-3 text-right">{formatTokenAmount(m.account.premiums, m.account.assetDecimals)}</td> */}
                       <td className="px-4 py-3 text-right">{formatTokenAmount(m.account.lpMinted, m.account.assetDecimals)}</td>
                       <td><button 
@@ -179,7 +179,7 @@ function parseMarket(market: ProgramAccount): MarketAccount {
                           <button 
                             className="bg-blue-700 hover:bg-blue-800 hover:shadow-md font-semibold py-2 px-8 text-white rounded-md"
                             onClick={() => onDeposit(parseMarket(m), tokenData[m.account.assetMint.toBase58()])}
-                          >Stake</button>
+                          >Liquidity</button>
                       </td>
                     </tr>
                   )

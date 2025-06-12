@@ -8,7 +8,7 @@ import { useTransactionToast } from "../ui/ui-layout";
 import toast from "react-hot-toast";
 
 
-export function DepositForm({  assetPrice, onDeposit, selectedMarket }: { selectedMarket: MarketAccount, assetPrice: any, onDeposit: () => void }) {
+export function DepositForm({  assetPrice, onDeposit, selectedMarket, symbol }: { selectedMarket: MarketAccount, assetPrice: any, onDeposit: () => void, symbol: string }) {
     const { depositIntoMarket } = rpcCalls();
     const [amount, setAmount] = useState("");
     const [usdAmount, setUsdAmount] = useState("");
@@ -77,7 +77,7 @@ export function DepositForm({  assetPrice, onDeposit, selectedMarket }: { select
                               placeholder="0.00"
                             />
                             <div className="absolute right-3 top-3 bg-gray-100 px-2 py-1 rounded text-sm">
-                              {selectedMarket.name}
+                              {symbol}
                             </div>
                           </div>
                         </div>
@@ -150,7 +150,7 @@ export function DepositForm({  assetPrice, onDeposit, selectedMarket }: { select
     )
 }
 
-export function WithdrawForm({  assetPrice, selectedMarket }: { assetPrice: any, selectedMarket: MarketAccount }) {
+export function WithdrawForm({  assetPrice, selectedMarket, symbol, onWithdraw }: { assetPrice: any, selectedMarket: MarketAccount, symbol: string, onWithdraw: () => void }) {
     const [lpAmount, setAmount] = useState("");
     const [usdAmount, setUsdAmount] = useState("");
     const [slippage, setSlippage] = useState(0.5); // Default 0.5%
@@ -158,8 +158,6 @@ export function WithdrawForm({  assetPrice, selectedMarket }: { assetPrice: any,
     const [showSlippageSettings, setShowSlippageSettings] = useState(false);
     const transactionToast = useTransactionToast()
     const { withdrawMarket } = rpcCalls();
-    // const { selectedMarket } = useMarket();
-    // const { withdrawMarket  } = optionsProgram();
     
       useEffect(() => {
         if (lpAmount) {
@@ -197,13 +195,6 @@ export function WithdrawForm({  assetPrice, selectedMarket }: { assetPrice: any,
         const slippageDecimal = slippage/100;
         const minAmountOut = estimatedAssetTokens * Math.pow(10, selectedMarket.assetDecimals ?? 0) * (1 - slippageDecimal);
     
-        // const withdrawPayload = {
-        //   lp_tokens_to_burn: amountTokens,
-        //   min_amount_out: minAmountOut,
-        //   ix: selectedMarket.id ?? 0,
-        //   mint: selectedMarket.assetMint ?? new PublicKey("")
-        // };
-    
         try {
               const signature = await withdrawMarket(
                 amountTokens,
@@ -211,7 +202,9 @@ export function WithdrawForm({  assetPrice, selectedMarket }: { assetPrice: any,
                 selectedMarket.id,
                 new PublicKey(selectedMarket.assetMint));
 
-              transactionToast(signature);
+                onWithdraw();
+
+                transactionToast(signature);
         } catch(err) {
             console.log('Error sending withdraw tx: ', err);
             toast.error('Failed')
@@ -248,7 +241,7 @@ export function WithdrawForm({  assetPrice, selectedMarket }: { assetPrice: any,
                               disabled
                             />
                             <div className="absolute right-3 top-3 bg-gray-100 px-2 py-1 rounded text-sm">
-                            {selectedMarket?.name}
+                            {symbol}
                             </div>
                           </div>
                         </div>
