@@ -197,7 +197,7 @@ export function rpcCalls() {
 
 async function buyOption(marketIx: number,
   option: string,
-  strikePrice: number,
+  spotDev: any,
   expirySetting: number,
   quantity: number,
   mint: string,
@@ -243,7 +243,7 @@ async function buyOption(marketIx: number,
     const payload = {
         marketIx: marketIx,
         option: option === "CALL" ? { call: {} } : { put: {} },
-        strikePriceUsd: new BN(strikePrice),
+        spotDeviation: spotDev,
         expirySetting: expiryToEnum(expirySetting),
         quantity: new BN(quantity)
         //slippage
@@ -252,7 +252,7 @@ async function buyOption(marketIx: number,
         {
             marketIx: marketIx,
             option: option === "CALL" ? { call: {} } : { put: {} },
-            strikePriceUsd: strikePrice,
+            spotDeviation: spotDev,
             expirySetting: expiryToEnum(expirySetting),
             quantity: quantity
         }

@@ -163,6 +163,169 @@
       ]
     },
     {
+      "name": "close_market",
+      "discriminator": [
+        88,
+        154,
+        248,
+        186,
+        48,
+        14,
+        123,
+        244
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "asset_mint"
+        },
+        {
+          "name": "admin_asset_ata",
+          "writable": true
+        },
+        {
+          "name": "lp_mint",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  97,
+                  114,
+                  107,
+                  101,
+                  116,
+                  95,
+                  108,
+                  112,
+                  95,
+                  109,
+                  105,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "params.ix"
+              }
+            ]
+          }
+        },
+        {
+          "name": "market",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  97,
+                  114,
+                  107,
+                  101,
+                  116
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "params.ix"
+              }
+            ]
+          }
+        },
+        {
+          "name": "market_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  97,
+                  114,
+                  107,
+                  101,
+                  116,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "params.ix"
+              }
+            ]
+          }
+        },
+        {
+          "name": "protocol_fees_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  116,
+                  111,
+                  99,
+                  111,
+                  108,
+                  95,
+                  102,
+                  101,
+                  101,
+                  115,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "params.ix"
+              }
+            ]
+          }
+        },
+        {
+          "name": "token_program"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "CloseMarketParams"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "create_account",
       "discriminator": [
         99,
@@ -1202,6 +1365,16 @@
       "code": 6020,
       "name": "InvalidVolatility",
       "msg": "InvalidVolatility"
+    },
+    {
+      "code": 6021,
+      "name": "VolatilityStaled",
+      "msg": "VolatilityStaled"
+    },
+    {
+      "code": 6022,
+      "name": "InvalidSpotPrice",
+      "msg": "InvalidSpotPrice"
     }
   ],
   "types": [
@@ -1223,8 +1396,12 @@
             }
           },
           {
-            "name": "strike_price_usd",
-            "type": "u64"
+            "name": "spot_deviation",
+            "type": {
+              "defined": {
+                "name": "SpotDeviation"
+              }
+            }
           },
           {
             "name": "expiry_setting",
@@ -1237,6 +1414,18 @@
           {
             "name": "quantity",
             "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CloseMarketParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "ix",
+            "type": "u16"
           }
         ]
       }
@@ -1783,6 +1972,41 @@
           {
             "name": "posted_slot",
             "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SpotDeviation",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "N20"
+          },
+          {
+            "name": "N15"
+          },
+          {
+            "name": "N10"
+          },
+          {
+            "name": "N5"
+          },
+          {
+            "name": "P0"
+          },
+          {
+            "name": "P5"
+          },
+          {
+            "name": "P10"
+          },
+          {
+            "name": "P15"
+          },
+          {
+            "name": "P20"
           }
         ]
       }

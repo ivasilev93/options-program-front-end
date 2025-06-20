@@ -143,15 +143,19 @@ function sqrt(value: bigint): bigint {
 }
 
 // Calculate call option premium using a simplified model suitable for on-chain execution
-function calculateCallPremium(
+function calculatePremium(
   currentPrice: bigint,
   strikePrice: bigint,
+  isCall: boolean,
   timeToExpiry: bigint,  // In years, scaled by PRECISION
   volatility: bigint     // Annual volatility, scaled by PRECISION
 ): bigint {
   // Basic simplified model for demonstration
   // 1. Intrinsic value component
-  const intrinsic = currentPrice > strikePrice ? currentPrice - strikePrice : 0n;
+  const intrinsic = isCall ? 
+    currentPrice > strikePrice ? currentPrice - strikePrice : 0n 
+    :
+    strikePrice > currentPrice ? strikePrice - currentPrice : 0n;
   
   // 2. Time value approximation
   // For integer math, we use a simplified formula that approximates BSM
@@ -201,17 +205,13 @@ function calculateOptionPremium(
   const volatility = (vol * PRECISION) / 10000n;
   
   // Calculate premium based on option type
-  let scaledUsdPremium: bigint;
-  if (optionType === "CALL") {
-    scaledUsdPremium = calculateCallPremium(
-      spotPriceUsd,
-      strikePriceUsd,
-      timeToExpiry,
-      volatility
-    );
-  } else {
-    throw new Error(CustomError.NotImplemented);
-  }
+  let scaledUsdPremium: bigint = calculatePremium(
+    spotPriceUsd,
+    strikePriceUsd,
+    optionType === "CALL",
+    timeToExpiry,
+    volatility
+  );
   
   const totalScaledUsdPremium = scaledUsdPremium * quantity;
   

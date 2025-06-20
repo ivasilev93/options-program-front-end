@@ -169,6 +169,169 @@ export type OptionsProgram = {
       ]
     },
     {
+      "name": "closeMarket",
+      "discriminator": [
+        88,
+        154,
+        248,
+        186,
+        48,
+        14,
+        123,
+        244
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "assetMint"
+        },
+        {
+          "name": "adminAssetAta",
+          "writable": true
+        },
+        {
+          "name": "lpMint",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  97,
+                  114,
+                  107,
+                  101,
+                  116,
+                  95,
+                  108,
+                  112,
+                  95,
+                  109,
+                  105,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "params.ix"
+              }
+            ]
+          }
+        },
+        {
+          "name": "market",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  97,
+                  114,
+                  107,
+                  101,
+                  116
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "params.ix"
+              }
+            ]
+          }
+        },
+        {
+          "name": "marketVault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  97,
+                  114,
+                  107,
+                  101,
+                  116,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "params.ix"
+              }
+            ]
+          }
+        },
+        {
+          "name": "protocolFeesVault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  114,
+                  111,
+                  116,
+                  111,
+                  99,
+                  111,
+                  108,
+                  95,
+                  102,
+                  101,
+                  101,
+                  115,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "params.ix"
+              }
+            ]
+          }
+        },
+        {
+          "name": "tokenProgram"
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "closeMarketParams"
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "createAccount",
       "discriminator": [
         99,
@@ -1208,6 +1371,16 @@ export type OptionsProgram = {
       "code": 6020,
       "name": "invalidVolatility",
       "msg": "invalidVolatility"
+    },
+    {
+      "code": 6021,
+      "name": "volatilityStaled",
+      "msg": "volatilityStaled"
+    },
+    {
+      "code": 6022,
+      "name": "invalidSpotPrice",
+      "msg": "invalidSpotPrice"
     }
   ],
   "types": [
@@ -1229,8 +1402,12 @@ export type OptionsProgram = {
             }
           },
           {
-            "name": "strikePriceUsd",
-            "type": "u64"
+            "name": "spotDeviation",
+            "type": {
+              "defined": {
+                "name": "spotDeviation"
+              }
+            }
           },
           {
             "name": "expirySetting",
@@ -1243,6 +1420,18 @@ export type OptionsProgram = {
           {
             "name": "quantity",
             "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "closeMarketParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "ix",
+            "type": "u16"
           }
         ]
       }
@@ -1789,6 +1978,41 @@ export type OptionsProgram = {
           {
             "name": "postedSlot",
             "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "spotDeviation",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "n20"
+          },
+          {
+            "name": "n15"
+          },
+          {
+            "name": "n10"
+          },
+          {
+            "name": "n5"
+          },
+          {
+            "name": "p0"
+          },
+          {
+            "name": "p5"
+          },
+          {
+            "name": "p10"
+          },
+          {
+            "name": "p15"
+          },
+          {
+            "name": "p20"
           }
         ]
       }

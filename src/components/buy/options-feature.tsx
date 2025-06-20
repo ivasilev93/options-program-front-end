@@ -13,6 +13,33 @@ import toast from "react-hot-toast";
 import { useTransactionToast } from "../ui/ui-layout";
 // import { calculatePremium } from "@/app/common/math-helper";
 
+const deviationOptions = [
+  { label: "-20%", value: -20, deviation: 80, obj: { n20: {} } },
+  { label: "-15%", value: -15, deviation: 85, obj: { n15: {} } },
+  { label: "-10%", value: -10, deviation: 90, obj: { n10: {} } },
+  { label: "-5%", value: -5, deviation: 95, obj: { n5: {} } },
+  { label: "0%", value: 0, deviation: 100, obj: { p0: {} } },
+  { label: "+5%", value: 5, deviation: 105, obj: { p5: {} } },
+  { label: "+10%", value: 10, deviation: 110, obj: { p10: {} } },
+  { label: "+15%", value: 15, deviation: 115, obj: { p15: {} } },
+  { label: "+20%", value: 20, deviation: 120, obj: { p20: {} } },
+];
+
+function calcStrikeFromDeviation(assetPrice: number, deviation: number) {
+  const scaledPrice = Math.round(assetPrice * 1e8);
+  
+  const adjusted = Math.floor((scaledPrice * deviation) / 100);
+  const step = scaledPrice < 1e8 ? 1e6 : 1e8;
+  
+  const rounded = Math.floor((adjusted + step / 2) / step);
+  
+  // Return scaled result
+  const result = rounded * step;
+  
+  return result / 1e8;
+}
+
+
 export default function OptionsBuyingFeature() {
   const navigate = useNavigate();
   const transactionToast = useTransactionToast()
@@ -32,6 +59,7 @@ export default function OptionsBuyingFeature() {
   const selectedMarket = location.state?.selectedMarket as MarketAccount;
   const tokenData = location.state?.tokenData as TokenInfo;
   // const { buyOption } = optionsProgram();
+  const [strikeDeviation, setStrikeDeviation] = useState(0); 
 
   useEffect(() => {
     if (selectedMarket) {
@@ -80,57 +108,37 @@ export default function OptionsBuyingFeature() {
 
       console.log('vol', vol)
       
-      if (optionType === "CALL") {
-        const [usdPremium, tokens] = calculateOptionPremium(
-          BigInt(Math.round(strikePriceFloat * Math.pow(10, 8))),
-          BigInt(Math.round(assetPrice * Math.pow(10, 8))),
-          BigInt(expiry),
-          selectedMarket.assetDecimals || 0,
-          BigInt(vol),
-          "CALL",
-          BigInt(quantity)
-        )
-
-        // const [tokens, usdPremium] = calculatePremium(
-        //   strikePriceFloat,
-        //   assetPrice,
-        //   timeToExpityInYears,
-        //   volatility,
-        //   "CALL",
-        //   selectedMarket?.account.assetDecimals ?? 0
-        // );
-        setEstimatedPremium(Number(usdPremium) / Math.pow(10, 8));
-        setEstimatedPremiumTokens(Number(tokens));
-      } else {
-        // const [tokens, usdPremium] = calculatePremium(
-        //   strikePriceFloat,
-        //   assetPrice,
-        //   timeToExpityInYears,
-        //   volatility,
-        //   "PUT",
-        //   selectedMarket?.account.assetDecimals ?? 0
-        // );
-        // setEstimatedPremium(usdPremium);
-        // setEstimatedPremiumTokens(tokens);
-      }
+      const [usdPremium, tokens] = calculateOptionPremium(
+         BigInt(Math.round(strikePriceFloat * Math.pow(10, 8))),
+         BigInt(Math.round(assetPrice * Math.pow(10, 8))),
+         BigInt(expiry),
+         selectedMarket.assetDecimals || 0,
+         BigInt(vol),
+         optionType,
+         BigInt(quantity)
+       )
+      setEstimatedPremium(Number(usdPremium) / Math.pow(10, 8));
+      setEstimatedPremiumTokens(Number(tokens));
     } else {
       setEstimatedPremium(0);
     }
   }, [strikePrice, quantity, expirySetting, optionType, assetPrice, selectedMarket]);
+  
+  useEffect(() => {
+    const devObj = deviationOptions.find((d) => d.value === strikeDeviation);
+    if (assetPrice && devObj) {
+      const strike = calcStrikeFromDeviation(assetPrice, devObj.deviation);
+
+      setStrikePrice((strike).toFixed(2)); // keep as string for input
+    }
+  }, [assetPrice, strikeDeviation]);
+
   
   const formatBN = (bn: BN, decimals = 0) => {
     if (!bn) return "0";
     const tokenAmount = bn.toNumber() / Math.pow(10, decimals);
     return (tokenAmount * (assetPrice ?? 0)).toLocaleString();
   };
-  
-  // const calculateProfitability = () => {
-  //   if (!selectedMarket) return "0%";
-  //   const premiums = selectedMarket.premiums;
-  //   const totalReserve = selectedMarket.reserveSupply;
-  //   if (totalReserve === 0) return "0%";
-  //   return ((premiums / totalReserve) * 100).toFixed(2) + "%";
-  // };
   
   // Prevents flash of content before redirect
   if (!selectedMarket) {
@@ -160,10 +168,14 @@ export default function OptionsBuyingFeature() {
     console.log('payload: ', buyOptionPayload);
     // return;
 
+    const devObj = deviationOptions.find((d) => d.value === strikeDeviation);
+    console.log('devObj: ', devObj?.obj);
+
+
     try {
         const signature = await buyOption(selectedMarket.id,
           optionType,
-          strikePriceScaled,
+          devObj?.obj,
           expirySetting,
           quantity,
           selectedMarket.assetMint,
@@ -194,7 +206,6 @@ export default function OptionsBuyingFeature() {
       case 4: 
         return selectedMarket.hour1VolatilityBps
     default:
-      console.log('def wtf')
       return 0
    }
   } 
@@ -301,7 +312,7 @@ export default function OptionsBuyingFeature() {
               </div>
               
               <div className="py-2">
-                <p className="text-sm text-gray-500 mb-1">Asset</p>
+                <p className="text-sm text-gray-500 mb-1">Asset mint</p>
                 <p className="font-mono text-sm p-2 rounded break-all">
                   {selectedMarket.priceFeed}
                 </p>
@@ -340,14 +351,13 @@ export default function OptionsBuyingFeature() {
                       CALL
                     </button>
                     <button 
-                      disabled
                       className={`py-2 px-4 rounded-lg font-medium transition-colors 
                         ${
                           optionType === "PUT" 
-                            ? "bg-red-600 text-white" 
-                            : "bg-white border border-red-500 text-red-500"
-                        } 
-                        opacity-50 cursor-not-allowed`}
+                            ? "bg-red-500 text-white" 
+                            : "bg-white border border-gray-200 text-gray-700"
+                        }`}
+                        onClick={() => setOptionType("PUT")}
                     >
                       PUT
                     </button>
@@ -358,20 +368,39 @@ export default function OptionsBuyingFeature() {
                 <div>
                   <label className="block text-sm text-gray-600 mb-2">Strike Price</label>
                   <div className="relative rounded-lg border border-gray-200 bg-white">
-                    <input 
-                      type="number" 
+                    <input
+                      type="text"
                       value={strikePrice}
-                      onChange={(e) => setStrikePrice(e.target.value)}
-                      className="w-full p-3 outline-none" 
+                      readOnly
+                      className="w-full p-3 outline-none bg-white cursor-not-allowed"
                       placeholder="0.00"
                     />
                     <div className="absolute right-3 top-3 bg-gray-100 px-2 py-1 rounded text-sm">
                       USD
                     </div>
                   </div>
-                  {/* <p className="text-xs text-gray-500 mt-1">
-                    Current price: ${assetPrice ? assetPrice.toFixed(2) : "Loading..."}
-                  </p> */}
+                  <div className="mb-2">
+                    <input
+                      type="range"
+                      min={-20}
+                      max={20}
+                      step={5}
+                      value={strikeDeviation}
+                      onChange={(e) => setStrikeDeviation(Number(e.target.value))}
+                      className="w-full"
+                      list="strike-marks"
+                    />
+                    <datalist id="strike-marks">
+                      {deviationOptions.map((opt) => (
+                        <option key={opt.value} value={opt.value} label={opt.label} />
+                      ))}
+                    </datalist>
+                    <div className="flex justify-between text-xs mt-1 text-gray-500">
+                      {deviationOptions.map((opt) => (
+                        <span key={opt.value}>{opt.label}</span>
+                      ))}
+                    </div>
+                  </div>
                 </div>
                 
                 {/* Expiry */}
@@ -389,7 +418,7 @@ export default function OptionsBuyingFeature() {
                       1 Hour
                     </button>
                     <button 
-                      className={`text-sm py-1 rounded-sm transition-colors ${
+                      className={`text-sm py-1 rounded-lg transition-colors ${
                         expirySetting === 1 
                           ? "bg-blue-600 text-white" 
                           : "bg-white border border-gray-200 text-gray-700"
@@ -429,26 +458,6 @@ export default function OptionsBuyingFeature() {
                       1 Week
                     </button>
                   </div>
-                  {/* <div className="relative rounded-lg border border-gray-200 bg-white">
-                    <input 
-                      type="number" 
-                      value={expirySetting}
-                      onChange={(e) => {
-                        let days = parseInt(e.target.value);
-                        if (days > 31) {
-                            days = 30;
-                        } 
-                        setExpiryDays(days)
-                      }}
-                      className="w-full p-3 outline-none" 
-                      placeholder="Days until expiry"
-                      min="1"
-                      max="30"
-                    />
-                    <div className="absolute right-3 top-3 bg-gray-100 px-2 py-1 rounded text-sm">
-                      Days
-                    </div>
-                  </div> */}
                 </div>
                 
                 {/* Quantity */}
@@ -515,7 +524,7 @@ export default function OptionsBuyingFeature() {
                   className={`w-full py-3 px-4 rounded-lg font-medium transition-colors ${
                     optionType === "CALL"
                       ? "bg-green-600 hover:bg-green-700 disabled:bg-gray-300 text-white"
-                      : "bg-red-600 hover:bg-red-700 disabled:bg-gray-300 text-white"
+                      : "bg-red-500 hover:bg-red-700 disabled:bg-gray-300 text-white"
                   }`}
                 >
                   Buy {optionType}
